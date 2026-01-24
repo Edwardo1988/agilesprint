@@ -51,6 +51,7 @@ export type Database = {
         Row: {
           id: string;
           child_id: string;
+          sprint_id: string | null;
           title: string;
           description: string;
           points: number;
@@ -61,6 +62,7 @@ export type Database = {
         Insert: {
           id?: string;
           child_id: string;
+          sprint_id?: string | null;
           title: string;
           description?: string;
           points?: number;
@@ -71,11 +73,44 @@ export type Database = {
         Update: {
           id?: string;
           child_id?: string;
+          sprint_id?: string | null;
           title?: string;
           description?: string;
           points?: number;
           completed?: boolean;
           completed_at?: string | null;
+          created_at?: string;
+        };
+      };
+      sprints: {
+        Row: {
+          id: string;
+          child_id: string;
+          name: string;
+          start_date: string;
+          end_date: string;
+          goal: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          child_id: string;
+          name: string;
+          start_date: string;
+          end_date: string;
+          goal?: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          child_id?: string;
+          name?: string;
+          start_date?: string;
+          end_date?: string;
+          goal?: string;
+          is_active?: boolean;
           created_at?: string;
         };
       };
