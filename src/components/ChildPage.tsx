@@ -17,6 +17,7 @@ export function ChildPage({ accessCode }: ChildPageProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   useEffect(() => {
     loadChildData();
@@ -61,6 +62,23 @@ export function ChildPage({ accessCode }: ChildPageProps) {
     }
 
     setLoading(false);
+  };
+
+  const updateEmoji = async (emoji: string) => {
+    if (!child) return;
+
+    const { error } = await supabase
+      .from('children')
+      .update({ avatar_emoji: emoji })
+      .eq('id', child.id);
+
+    if (error) {
+      console.error('Error updating emoji:', error);
+      return;
+    }
+
+    setChild({ ...child, avatar_emoji: emoji });
+    setShowEmojiPicker(false);
   };
 
   const completeTask = async (task: Task) => {
@@ -145,11 +163,17 @@ export function ChildPage({ accessCode }: ChildPageProps) {
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
         <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 mb-6">
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mb-6">
-            <div
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl sm:text-3xl shadow-lg flex-shrink-0"
-              style={{ backgroundColor: child.avatar_color }}
-            >
-              {child.name.charAt(0).toUpperCase()}
+            <div className="relative group">
+              <div
+                onClick={() => setShowEmojiPicker(true)}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center font-bold text-3xl sm:text-4xl shadow-lg flex-shrink-0 cursor-pointer transition-transform hover:scale-110"
+                style={{ backgroundColor: child.avatar_color }}
+              >
+                {child.avatar_emoji || child.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-xs sm:text-sm font-semibold">
+                Изменить
+              </div>
             </div>
             <div className="flex-1 text-center sm:text-left">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">Привет, {child.name}!</h1>
@@ -375,6 +399,89 @@ export function ChildPage({ accessCode }: ChildPageProps) {
           </div>
         )}
       </div>
+
+      {/* Emoji Picker Modal */}
+      {showEmojiPicker && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowEmojiPicker(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-md w-full p-6 animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 text-center">
+              Выбери свой эмодзи! 😊
+            </h3>
+            <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 sm:gap-3 max-h-96 overflow-y-auto">
+              {[
+                '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+                '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
+                '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜',
+                '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏',
+                '😒', '😞', '😔', '😟', '😕', '🙁', '😣', '😖',
+                '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡',
+                '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰',
+                '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶',
+                '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼',
+                '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
+                '🐧', '🐦', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗',
+                '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜',
+                '🦟', '🦗', '🕷', '🦂', '🐢', '🐍', '🦎', '🦖',
+                '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠',
+                '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆',
+                '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫',
+                '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏',
+                '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐈',
+                '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊', '🐇',
+                '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿',
+                '🌟', '⭐', '✨', '💫', '🌈', '🌸', '🌺', '🌻',
+                '🌼', '🌷', '🥀', '🌹', '💐', '🍀', '🌿', '🍃',
+                '🎨', '🎭', '🎪', '🎬', '🎤', '🎧', '🎼', '🎹',
+                '🎸', '🎺', '🎷', '🥁', '🎻', '🎲', '🎯', '🎮',
+                '🎰', '🎳', '🚀', '✈️', '🚁', '🛸', '🚂', '🚗',
+                '🏆', '🥇', '🥈', '🥉', '⚽', '🏀', '🏈', '⚾',
+                '🎾', '🏐', '🏉', '🥏', '🎱', '🏓', '🏸', '🏒',
+                '🍕', '🍔', '🍟', '🌭', '🍿', '🧃', '🍩', '🍪',
+                '🎂', '🍰', '🧁', '🍦', '🍨', '🍧', '🍭', '🍬',
+                '🔥', '💧', '⚡', '🌙', '☀️', '🌤️', '⛅', '🌦️',
+                '❤️', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎',
+                '💖', '💗', '💓', '💞', '💕', '💝', '💘', '💌',
+              ].map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => updateEmoji(emoji)}
+                  className="text-3xl sm:text-4xl p-2 hover:bg-gray-100 rounded-lg transition-colors hover:scale-110"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowEmojiPicker(false)}
+              className="mt-6 w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition-colors"
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes scale-in {
+          from {
+            transform: scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        .animate-scale-in {
+          animation: scale-in 0.2s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

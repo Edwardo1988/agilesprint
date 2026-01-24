@@ -92,7 +92,9 @@ export function ParentDashboard({ parentId, accessCode }: ParentDashboardProps) 
     if (!newChildName.trim()) return;
 
     const colors = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'];
+    const emojis = ['😀', '😎', '🤗', '😊', '🥳', '🤩', '😇', '🦄', '🐱', '🐶', '🦊', '🐼', '🐨', '🦁', '🐯', '🐸', '🐙', '🦋', '🌟', '⭐', '🌈', '🎨', '🎭', '🎪', '🎯', '🎮', '🚀', '✨', '💫', '🔥'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
 
     const { data, error } = await supabase
       .from('children')
@@ -101,6 +103,7 @@ export function ParentDashboard({ parentId, accessCode }: ParentDashboardProps) 
         name: newChildName.trim(),
         access_code: generateAccessCode(),
         avatar_color: randomColor,
+        avatar_emoji: randomEmoji,
       })
       .select()
       .single();
@@ -215,10 +218,10 @@ export function ParentDashboard({ parentId, accessCode }: ParentDashboardProps) 
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
+                      className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-2xl flex-shrink-0"
                       style={{ backgroundColor: child.avatar_color }}
                     >
-                      {child.name.charAt(0).toUpperCase()}
+                      {child.avatar_emoji || child.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-900 truncate">{child.name}</h3>

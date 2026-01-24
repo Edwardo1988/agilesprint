@@ -25,6 +25,7 @@ export type Database = {
           name: string;
           access_code: string;
           avatar_color: string;
+          avatar_emoji: string | null;
           total_points: number;
           created_at: string;
         };
@@ -34,6 +35,7 @@ export type Database = {
           name: string;
           access_code: string;
           avatar_color?: string;
+          avatar_emoji?: string | null;
           total_points?: number;
           created_at?: string;
         };
@@ -43,6 +45,7 @@ export type Database = {
           name?: string;
           access_code?: string;
           avatar_color?: string;
+          avatar_emoji?: string | null;
           total_points?: number;
           created_at?: string;
         };
