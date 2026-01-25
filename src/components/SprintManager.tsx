@@ -1,286 +1,186 @@
-import { useState, useEffect } from 'react';
-import { Calendar, Target, Plus, PlayCircle, StopCircle, TrendingUp } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import type { Database } from '../lib/database.types';
+import { useState } from 'react'
+import { supabase } from '../lib/supabase'
+import type { Database } from '../lib/database.types'
 
-type Sprint = Database['public']['Tables']['sprints']['Row'];
-type Task = Database['public']['Tables']['tasks']['Row'];
+type Sprint = Database['public']['Tables']['sprints']['Row']
 
 interface SprintManagerProps {
-  childId: string;
-  childName: string;
+  childId: string
+  sprints: Sprint[]
+  onUpdate: () => void
 }
 
-export function SprintManager({ childId, childName }: SprintManagerProps) {
-  const [sprints, setSprints] = useState<Sprint[]>([]);
-  const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newSprintName, setNewSprintName] = useState('');
-  const [newSprintGoal, setNewSprintGoal] = useState('');
-  const [sprintTasks, setSprintTasks] = useState<Task[]>([]);
+export default function SprintManager({ childId, sprints, onUpdate }: SprintManagerProps) {
+  const [showCreateSprint, setShowCreateSprint] = useState(false)
+  const [newSprintName, setNewSprintName] = useState('')
+  const [newSprintGoal, setNewSprintGoal] = useState('')
 
-  useEffect(() => {
-    loadSprints();
-  }, [childId]);
-
-  useEffect(() => {
-    if (activeSprint) {
-      loadSprintTasks(activeSprint.id);
-    }
-  }, [activeSprint]);
-
-  const loadSprints = async () => {
-    const { data, error } = await supabase
-      .from('sprints')
-      .select('*')
-      .eq('child_id', childId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error loading sprints:', error);
-      return;
-    }
-
-    setSprints(data || []);
-    const active = data?.find(s => s.is_active);
-    setActiveSprint(active || null);
-  };
-
-  const loadSprintTasks = async (sprintId: string) => {
-    const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('sprint_id', sprintId)
-      .order('completed', { ascending: true });
-
-    if (error) {
-      console.error('Error loading sprint tasks:', error);
-      return;
-    }
-
-    setSprintTasks(data || []);
-  };
+  const activeSprint = sprints.find(s => s.is_active)
+  const completedSprints = sprints.filter(s => !s.is_active)
 
   const createSprint = async () => {
-    if (!newSprintName.trim()) return;
+    if (!newSprintName.trim()) return
 
-    const today = new Date();
-    const nextWeek = new Date(today);
-    nextWeek.setDate(today.getDate() + 7);
-
-    // Деактивируем текущий активный спринт
+    // Деактивировать текущий активный спринт
     if (activeSprint) {
       await supabase
         .from('sprints')
         .update({ is_active: false })
-        .eq('id', activeSprint.id);
+        .eq('id', activeSprint.id)
     }
 
-    const { data, error } = await supabase
-      .from('sprints')
-      .insert({
-        child_id: childId,
-        name: newSprintName.trim(),
-        goal: newSprintGoal.trim(),
-        start_date: today.toISOString(),
-        end_date: nextWeek.toISOString(),
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating sprint:', error);
-      return;
-    }
-
-    setSprints([data, ...sprints]);
-    setActiveSprint(data);
-    setNewSprintName('');
-    setNewSprintGoal('');
-    setShowCreateForm(false);
-  };
-
-  const completeSprint = async () => {
-    if (!activeSprint) return;
+    // Создать новый спринт (1 неделя)
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setDate(endDate.getDate() + 7)
 
     const { error } = await supabase
       .from('sprints')
-      .update({ is_active: false })
-      .eq('id', activeSprint.id);
+      .insert([
+        {
+          child_id: childId,
+          name: newSprintName.trim(),
+          goal: newSprintGoal.trim() || null,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          is_active: true,
+        }
+      ])
 
-    if (error) {
-      console.error('Error completing sprint:', error);
-      return;
+    if (!error) {
+      setNewSprintName('')
+      setNewSprintGoal('')
+      setShowCreateSprint(false)
+      onUpdate()
     }
+  }
 
-    setActiveSprint(null);
-    loadSprints();
-  };
+  const completeSprint = async (sprintId: string) => {
+    const { error } = await supabase
+      .from('sprints')
+      .update({ is_active: false })
+      .eq('id', sprintId)
 
-  const getSprintProgress = () => {
-    if (sprintTasks.length === 0) return 0;
-    const completed = sprintTasks.filter(t => t.completed).length;
-    return Math.round((completed / sprintTasks.length) * 100);
-  };
+    if (!error) {
+      onUpdate()
+    }
+  }
 
-  const getSprintPoints = () => {
-    return sprintTasks
-      .filter(t => t.completed)
-      .reduce((sum, t) => sum + t.points, 0);
-  };
-
-  const getDaysLeft = () => {
-    if (!activeSprint) return 0;
-    const end = new Date(activeSprint.end_date);
-    const today = new Date();
-    const diff = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(0, diff);
-  };
+  const getDaysRemaining = (endDate: string) => {
+    const end = new Date(endDate)
+    const now = new Date()
+    const diffTime = end.getTime() - now.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  }
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 mb-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-600 flex-shrink-0" />
-          <span className="break-words">Спринты для {childName}</span>
-        </h2>
-        {!showCreateForm && (
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-medium whitespace-nowrap"
-          >
-            <Plus className="w-5 h-5 flex-shrink-0" />
-            Новый спринт
-          </button>
-        )}
+    <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Спринты</h2>
+        <button
+          onClick={() => setShowCreateSprint(true)}
+          className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl"
+        >
+          + Создать спринт
+        </button>
       </div>
 
-      {showCreateForm && (
-        <div className="mb-6 p-4 sm:p-6 bg-indigo-50 rounded-xl">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Создать новый спринт</h3>
-          <div className="space-y-3">
-            <input
-              type="text"
-              placeholder="Название спринта (например: 'Неделя 1', 'Январь')"
-              value={newSprintName}
-              onChange={(e) => setNewSprintName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <input
-              type="text"
-              placeholder="Цель спринта (необязательно)"
-              value={newSprintGoal}
-              onChange={(e) => setNewSprintGoal(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={createSprint}
-                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-              >
-                Создать спринт (7 дней)
-              </button>
-              <button
-                onClick={() => setShowCreateForm(false)}
-                className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Отмена
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Активный спринт */}
       {activeSprint ? (
-        <div className="space-y-4">
-          <div className="p-4 sm:p-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl text-white">
-            <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-4">
-              <div className="w-full sm:flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <PlayCircle className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
-                  <h3 className="text-xl sm:text-2xl font-bold break-words">{activeSprint.name}</h3>
-                </div>
-                {activeSprint.goal && (
-                  <div className="flex items-start gap-2 mt-2 opacity-90">
-                    <Target className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                    <p className="text-base sm:text-lg break-words">{activeSprint.goal}</p>
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={completeSprint}
-                className="w-full sm:w-auto px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex items-center justify-center gap-2 font-medium whitespace-nowrap"
-              >
-                <StopCircle className="w-5 h-5 flex-shrink-0" />
-                Завершить
-              </button>
+        <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-purple-200 rounded-xl p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 break-words">
+                🎯 {activeSprint.name}
+              </h3>
+              {activeSprint.goal && (
+                <p className="text-sm sm:text-base text-gray-600 break-words">
+                  {activeSprint.goal}
+                </p>
+              )}
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6">
-              <div className="bg-white/10 rounded-lg p-3 sm:p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm opacity-90">Осталось дней</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold">{getDaysLeft()}</p>
-              </div>
-              <div className="bg-white/10 rounded-lg p-3 sm:p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm opacity-90">Прогресс</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold">{getSprintProgress()}%</p>
-              </div>
-              <div className="bg-white/10 rounded-lg p-3 sm:p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Target className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm opacity-90">Баллы</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold">{getSprintPoints()}</p>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
-                <span>Выполнено задач: {sprintTasks.filter(t => t.completed).length}/{sprintTasks.length}</span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-3">
-                <div
-                  className="bg-white rounded-full h-3 transition-all duration-500"
-                  style={{ width: `${getSprintProgress()}%` }}
-                />
-              </div>
-            </div>
+            <button
+              onClick={() => completeSprint(activeSprint.id)}
+              className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors shadow-md flex-shrink-0"
+            >
+              Завершить спринт
+            </button>
           </div>
 
-          <div className="text-xs sm:text-sm text-gray-600 break-words">
-            <p>
-              📅 Период: {new Date(activeSprint.start_date).toLocaleDateString('ru-RU')} - {new Date(activeSprint.end_date).toLocaleDateString('ru-RU')}
-            </p>
+          {/* Статистика */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-4">
+            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">Дней осталось</div>
+              <div className="text-xl sm:text-2xl font-bold text-purple-600">
+                {getDaysRemaining(activeSprint.end_date)}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">Начало</div>
+              <div className="text-sm sm:text-base font-semibold text-gray-800">
+                {new Date(activeSprint.start_date).toLocaleDateString('ru-RU', { 
+                  day: 'numeric', 
+                  month: 'short' 
+                })}
+              </div>
+            </div>
+            <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm col-span-2 sm:col-span-1">
+              <div className="text-xs sm:text-sm text-gray-600 mb-1">Окончание</div>
+              <div className="text-sm sm:text-base font-semibold text-gray-800">
+                {new Date(activeSprint.end_date).toLocaleDateString('ru-RU', { 
+                  day: 'numeric', 
+                  month: 'short' 
+                })}
+              </div>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-500">
-          <Calendar className="w-16 h-16 mx-auto mb-4 opacity-30" />
-          <p className="text-lg font-medium">Нет активного спринта</p>
-          <p className="mt-2">Создайте новый спринт, чтобы начать планирование задач на неделю</p>
+        <div className="text-center py-8 sm:py-12 bg-gray-50 rounded-xl">
+          <p className="text-gray-500 text-base sm:text-lg mb-4">Нет активного спринта</p>
+          <button
+            onClick={() => setShowCreateSprint(true)}
+            className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg"
+          >
+            Создать первый спринт
+          </button>
         </div>
       )}
 
-      {sprints.length > 1 && (
-        <div className="mt-8">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">История спринтов</h3>
-          <div className="space-y-2">
-            {sprints.filter(s => !s.is_active).slice(0, 5).map((sprint) => (
-              <div key={sprint.id} className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+      {/* История спринтов */}
+      {completedSprints.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-base sm:text-lg font-bold text-gray-700 mb-4">
+            История ({completedSprints.length})
+          </h3>
+          <div className="space-y-3">
+            {completedSprints.slice(0, 3).map(sprint => (
+              <div
+                key={sprint.id}
+                className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900 break-words">{sprint.name}</h4>
-                    {sprint.goal && <p className="text-xs sm:text-sm text-gray-600 mt-1 break-words">{sprint.goal}</p>}
+                    <h4 className="font-semibold text-sm sm:text-base text-gray-800 truncate">
+                      {sprint.name}
+                    </h4>
+                    {sprint.goal && (
+                      <p className="text-xs sm:text-sm text-gray-600 truncate">
+                        {sprint.goal}
+                      </p>
+                    )}
                   </div>
-                  <div className="text-right text-xs sm:text-sm text-gray-600 whitespace-nowrap">
-                    <p>{new Date(sprint.start_date).toLocaleDateString('ru-RU')}</p>
+                  <div className="text-xs sm:text-sm text-gray-500 flex-shrink-0">
+                    {new Date(sprint.start_date).toLocaleDateString('ru-RU', { 
+                      day: 'numeric', 
+                      month: 'short' 
+                    })}
+                    {' → '}
+                    {new Date(sprint.end_date).toLocaleDateString('ru-RU', { 
+                      day: 'numeric', 
+                      month: 'short' 
+                    })}
                   </div>
                 </div>
               </div>
@@ -288,6 +188,71 @@ export function SprintManager({ childId, childName }: SprintManagerProps) {
           </div>
         </div>
       )}
+
+      {/* Модальное окно создания спринта */}
+      {showCreateSprint && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowCreateSprint(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6">
+              Создать спринт
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Название спринта
+                </label>
+                <input
+                  type="text"
+                  placeholder="Например: Неделя 1"
+                  value={newSprintName}
+                  onChange={(e) => setNewSprintName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && createSprint()}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Цель спринта (необязательно)
+                </label>
+                <textarea
+                  placeholder="Что нужно достичь за эту неделю?"
+                  value={newSprintGoal}
+                  onChange={(e) => setNewSprintGoal(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 resize-none"
+                />
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                <p className="text-xs sm:text-sm text-blue-700">
+                  ℹ️ Спринт автоматически создаётся на 7 дней
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowCreateSprint(false)}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={createSprint}
+                disabled={!newSprintName.trim()}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Создать
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  )
 }
