@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LandingPage } from './components/LandingPage';
-import { ParentDashboard } from './components/ParentDashboard';
-import { ChildPage } from './components/ChildPage';
+import ParentDashboard from './components/ParentDashboard';
+import ChildPage from './components/ChildPage';
 import { supabase } from './lib/supabase';
 
 function App() {

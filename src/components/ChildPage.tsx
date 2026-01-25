@@ -7,6 +7,10 @@ type Child = Database['public']['Tables']['children']['Row']
 type Task = Database['public']['Tables']['tasks']['Row']
 type Sprint = Database['public']['Tables']['sprints']['Row']
 
+interface ChildPageProps {
+  accessCode: string
+}
+
 // Коллекция нативных эмодзи (Unicode)
 const EMOJI_COLLECTION = [
   // Смайлики и эмоции
@@ -50,10 +54,7 @@ const EMOJI_COLLECTION = [
   '⚛', '🔮', '🎊', '🎉', '🎈', '🎁', '🏆', '🥇', '🥈', '🥉',
 ]
 
-export default function ChildPage() {
-  // Получаем childId из URL (например: /child/uuid)
-  const childId = window.location.pathname.split('/').pop()
-  
+export default function ChildPage({ accessCode }: ChildPageProps) {
   const [child, setChild] = useState<Child | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null)
@@ -61,23 +62,23 @@ export default function ChildPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   useEffect(() => {
-    if (!childId) {
+    if (!accessCode) {
       return
     }
 
     loadChildData()
-  }, [childId])
+  }, [accessCode])
 
   const loadChildData = async () => {
-    if (!childId) return
+    if (!accessCode) return
 
     setLoading(true)
     
-    // Загрузить данные ребёнка
+    // Загрузить данные ребёнка по коду доступа
     const { data: childData, error: childError } = await supabase
       .from('children')
       .select('*')
-      .eq('id', childId)
+      .eq('access_code', accessCode)
       .single()
 
     if (childError || !childData) {
@@ -92,7 +93,7 @@ export default function ChildPage() {
     const { data: sprintData } = await supabase
       .from('sprints')
       .select('*')
-      .eq('child_id', childId)
+      .eq('child_id', childData.id)
       .eq('is_active', true)
       .single()
 
@@ -102,7 +103,7 @@ export default function ChildPage() {
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
       .select('*')
-      .eq('child_id', childId)
+      .eq('child_id', childData.id)
       .order('created_at', { ascending: false })
 
     if (tasksError) {
@@ -126,12 +127,12 @@ export default function ChildPage() {
   }
 
   const updateAvatar = async (emoji: string) => {
-    if (!childId) return
+    if (!child) return
 
     const { error } = await supabase
       .from('children')
       .update({ avatar_emoji: emoji })
-      .eq('id', childId)
+      .eq('id', child.id)
 
     if (!error) {
       setChild(prev => prev ? { ...prev, avatar_emoji: emoji } : null)

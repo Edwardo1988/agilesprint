@@ -7,6 +7,11 @@ type Child = Database['public']['Tables']['children']['Row']
 type Task = Database['public']['Tables']['tasks']['Row']
 type Sprint = Database['public']['Tables']['sprints']['Row']
 
+interface ParentDashboardProps {
+  parentId: string
+  accessCode: string
+}
+
 // Коллекция стартовых эмодзи для случайного выбора при создании ребёнка
 const STARTER_EMOJIS = [
   '😀', '😃', '😄', '😁', '😆', '😊', '😇', '🥰', '😍', '🤩',
@@ -16,7 +21,7 @@ const STARTER_EMOJIS = [
   '🎈', '🎁', '🏆', '🥇', '🎯', '🚀', '🌈', '🌸', '🌺', '🌻',
 ]
 
-export default function ParentDashboard() {
+export default function ParentDashboard({ parentId, accessCode }: ParentDashboardProps) {
   const [children, setChildren] = useState<Child[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [sprints, setSprints] = useState<Sprint[]>([])
@@ -45,10 +50,11 @@ export default function ParentDashboard() {
   const loadDashboardData = async () => {
     setLoading(true)
 
-    // Загрузить детей
+    // Загрузить детей этого родителя
     const { data: childrenData, error: childrenError } = await supabase
       .from('children')
       .select('*')
+      .eq('parent_id', parentId)
       .order('created_at', { ascending: true })
 
     if (childrenError) {
@@ -89,13 +95,20 @@ export default function ParentDashboard() {
 
     // Выбрать случайный эмодзи
     const randomEmoji = STARTER_EMOJIS[Math.floor(Math.random() * STARTER_EMOJIS.length)]
+    
+    // Генерировать уникальный код доступа
+    const generateAccessCode = () => {
+      return Math.random().toString(36).substring(2, 10).toUpperCase();
+    };
 
     const { error } = await supabase
       .from('children')
       .insert([
         {
+          parent_id: parentId,
           name: newChildName.trim(),
           avatar_emoji: randomEmoji,
+          access_code: generateAccessCode(),
           total_points: 0,
         }
       ])
@@ -220,7 +233,7 @@ export default function ParentDashboard() {
                         {child.total_points} баллов
                       </p>
                       <a
-                        href={`/child/${child.id}`}
+                        href={`/?child=${child.access_code}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs sm:text-sm text-purple-600 hover:text-purple-700 hover:underline"
