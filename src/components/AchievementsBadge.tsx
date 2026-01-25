@@ -1,307 +1,283 @@
-import { useState } from 'react';
-import { Award, Trophy, Star, Zap, Crown, Medal, X } from 'lucide-react';
+import { useState } from 'react'
+import type { Database } from '../lib/database.types'
+
+type Task = Database['public']['Tables']['tasks']['Row']
 
 interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  detailedDescription: string;
-  icon: React.ReactNode;
-  color: string;
-  requirement: number;
-  type: 'points' | 'tasks';
+  id: string
+  name: string
+  description: string
+  detailedDescription: string
+  icon: string
+  threshold: number
+  color: string
 }
 
-const achievements: Achievement[] = [
+const ACHIEVEMENTS: Achievement[] = [
   {
-    id: 'first-steps',
-    title: 'Первые шаги',
-    description: 'Выполни 1 задачу',
-    detailedDescription: 'Поздравляем! Ты выполнил свою первую задачу! Это только начало твоего пути к успеху. Продолжай в том же духе!',
-    icon: <Star className="w-6 h-6" />,
-    color: 'from-yellow-400 to-orange-500',
-    requirement: 1,
-    type: 'tasks',
+    id: 'first_task',
+    name: 'Первые шаги',
+    description: 'Выполни первую задачу',
+    detailedDescription: 'Поздравляем! Ты выполнил свою самую первую задачу. Это начало большого пути к достижению целей!',
+    icon: '🌟',
+    threshold: 1,
+    color: 'from-yellow-400 to-orange-400'
   },
   {
-    id: 'task-master',
-    title: 'Мастер задач',
+    id: 'task_master_5',
+    name: 'Активный старт',
     description: 'Выполни 5 задач',
-    detailedDescription: 'Отлично! Ты выполнил уже 5 задач! Ты показываешь настоящую ответственность и целеустремлённость. Так держать!',
-    icon: <Medal className="w-6 h-6" />,
-    color: 'from-blue-400 to-blue-600',
-    requirement: 5,
-    type: 'tasks',
+    detailedDescription: 'Отличная работа! Ты уже выполнил 5 задач. Продолжай в том же духе!',
+    icon: '⭐',
+    threshold: 5,
+    color: 'from-blue-400 to-cyan-400'
   },
   {
-    id: 'super-achiever',
-    title: 'Супер исполнитель',
+    id: 'task_master_10',
+    name: 'Трудолюбивый',
     description: 'Выполни 10 задач',
-    detailedDescription: 'Невероятно! 10 выполненных задач - это серьёзное достижение! Ты демонстрируешь упорство и трудолюбие. Гордись собой!',
-    icon: <Trophy className="w-6 h-6" />,
-    color: 'from-green-400 to-green-600',
-    requirement: 10,
-    type: 'tasks',
+    detailedDescription: 'Потрясающе! Целых 10 выполненных задач. Ты показываешь настоящее упорство!',
+    icon: '🏅',
+    threshold: 10,
+    color: 'from-green-400 to-emerald-400'
   },
   {
-    id: 'point-collector',
-    title: 'Коллекционер баллов',
-    description: 'Набери 50 баллов',
-    detailedDescription: 'Ты набрал 50 баллов! Твои усилия не остались незамеченными. Продолжай зарабатывать баллы и становись ещё лучше!',
-    icon: <Zap className="w-6 h-6" />,
-    color: 'from-purple-400 to-purple-600',
-    requirement: 50,
-    type: 'points',
+    id: 'task_master_25',
+    name: 'Профессионал',
+    description: 'Выполни 25 задач',
+    detailedDescription: 'Невероятно! 25 выполненных задач - это серьёзное достижение. Ты настоящий профессионал!',
+    icon: '🎯',
+    threshold: 25,
+    color: 'from-purple-400 to-pink-400'
   },
   {
-    id: 'point-master',
-    title: 'Мастер баллов',
+    id: 'task_master_50',
+    name: 'Мастер задач',
+    description: 'Выполни 50 задач',
+    detailledDescription: 'Фантастика! Полсотни выполненных задач - это выдающийся результат. Ты мастер своего дела!',
+    icon: '👑',
+    threshold: 50,
+    color: 'from-yellow-500 to-orange-500'
+  },
+  {
+    id: 'points_100',
+    name: 'Коллекционер',
     description: 'Набери 100 баллов',
-    detailedDescription: 'Фантастика! 100 баллов - это впечатляющий результат! Ты настоящий мастер выполнения задач. Так держать!',
-    icon: <Award className="w-6 h-6" />,
-    color: 'from-pink-400 to-pink-600',
-    requirement: 100,
-    type: 'points',
+    detailedDescription: 'Великолепно! Ты собрал уже 100 баллов. Продолжай копить их для крутых наград!',
+    icon: '💎',
+    threshold: 100,
+    color: 'from-cyan-400 to-blue-400'
   },
   {
-    id: 'champion',
-    title: 'Чемпион',
-    description: 'Набери 200 баллов',
-    detailedDescription: 'Невероятное достижение! 200 баллов - ты настоящий чемпион! Твои родители могут гордиться тобой. Ты лучший!',
-    icon: <Crown className="w-6 h-6" />,
-    color: 'from-amber-400 to-yellow-600',
-    requirement: 200,
-    type: 'points',
+    id: 'points_250',
+    name: 'Звезда',
+    description: 'Набери 250 баллов',
+    detailedDescription: 'Восхитительно! 250 баллов - это показатель твоего старания и целеустремлённости!',
+    icon: '✨',
+    threshold: 250,
+    color: 'from-indigo-400 to-purple-400'
   },
-];
+  {
+    id: 'points_500',
+    name: 'Чемпион',
+    description: 'Набери 500 баллов',
+    detailedDescription: 'Потрясающе! 500 баллов - ты настоящий чемпион. Так держать!',
+    icon: '🏆',
+    threshold: 500,
+    color: 'from-amber-400 to-yellow-500'
+  },
+  {
+    id: 'points_1000',
+    name: 'Легенда',
+    description: 'Набери 1000 баллов',
+    detailedDescription: 'Легендарно! Тысяча баллов - это невероятное достижение. Ты вошёл в историю!',
+    icon: '🌟',
+    threshold: 1000,
+    color: 'from-pink-500 to-rose-500'
+  }
+]
 
 interface AchievementsBadgeProps {
-  totalPoints: number;
-  completedTasksCount: number;
+  tasks: Task[]
+  totalPoints: number
 }
 
-export function AchievementsBadge({ totalPoints, completedTasksCount }: AchievementsBadgeProps) {
-  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+export default function AchievementsBadge({ tasks, totalPoints }: AchievementsBadgeProps) {
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null)
+  
+  const completedTasks = tasks.filter(t => t.is_completed).length
 
-  const earnedAchievements = achievements.filter((achievement) => {
-    if (achievement.type === 'points') {
-      return totalPoints >= achievement.requirement;
-    }
-    return completedTasksCount >= achievement.requirement;
-  });
-
-  const unlockedCount = earnedAchievements.length;
-  const totalCount = achievements.length;
-
-  const getAchievementProgress = (achievement: Achievement) => {
-    if (achievement.type === 'points') {
-      return Math.min(100, Math.round((totalPoints / achievement.requirement) * 100));
-    }
-    return Math.min(100, Math.round((completedTasksCount / achievement.requirement) * 100));
-  };
-
-  const isAchievementEarned = (achievement: Achievement) => {
-    return achievement.type === 'points'
-      ? totalPoints >= achievement.requirement
-      : completedTasksCount >= achievement.requirement;
-  };
+  const getAchievementStatus = (achievement: Achievement) => {
+    const current = achievement.id.startsWith('points_') ? totalPoints : completedTasks
+    const isUnlocked = current >= achievement.threshold
+    const progress = Math.min((current / achievement.threshold) * 100, 100)
+    
+    return { isUnlocked, progress, current }
+  }
 
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
-            Достижения
-          </h2>
-          <span className="text-sm font-semibold text-gray-600">
-            {unlockedCount} / {totalCount}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-          {achievements.map((achievement) => {
-            const isEarned = isAchievementEarned(achievement);
-            const progress = getAchievementProgress(achievement);
-
+      <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2">
+          <span className="text-2xl">🏆</span>
+          Достижения
+        </h2>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+          {ACHIEVEMENTS.map(achievement => {
+            const { isUnlocked, progress } = getAchievementStatus(achievement)
+            
             return (
-              <div
+              <button
                 key={achievement.id}
                 onClick={() => setSelectedAchievement(achievement)}
-                className={`p-4 sm:p-5 rounded-xl border-2 transition-all cursor-pointer hover:scale-105 ${
-                  isEarned
-                    ? 'border-yellow-300 bg-gradient-to-br shadow-lg'
-                    : 'border-gray-200 bg-gray-50 opacity-60 hover:opacity-80'
+                className={`p-4 sm:p-5 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 ${
+                  isUnlocked
+                    ? 'border-yellow-300 bg-gradient-to-br ' + achievement.color + ' shadow-lg hover:shadow-xl'
+                    : 'border-gray-200 bg-gray-50 hover:border-gray-300'
                 }`}
-                style={
-                  isEarned
-                    ? {
-                        background: `linear-gradient(135deg, var(--tw-gradient-from), var(--tw-gradient-to))`,
-                        backgroundImage: `linear-gradient(135deg, ${
-                          achievement.color.includes('yellow')
-                            ? '#fbbf24, #f59e0b'
-                            : achievement.color.includes('blue')
-                            ? '#60a5fa, #2563eb'
-                            : achievement.color.includes('green')
-                            ? '#4ade80, #16a34a'
-                            : achievement.color.includes('purple')
-                            ? '#c084fc, #9333ea'
-                            : achievement.color.includes('pink')
-                            ? '#f472b6, #db2777'
-                            : '#fbbf24, #d97706'
-                        })`,
-                      }
-                    : undefined
-                }
               >
-                <div
-                  className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-2 sm:mb-3 ${
-                    isEarned ? 'bg-white/90 text-gray-900' : 'bg-gray-200 text-gray-400'
-                  }`}
-                >
-                  {achievement.icon}
-                </div>
-                <h3
-                  className={`font-bold text-xs sm:text-sm mb-1 ${
-                    isEarned ? 'text-white' : 'text-gray-700'
-                  }`}
-                >
-                  {achievement.title}
-                </h3>
-                <p
-                  className={`text-xs ${
-                    isEarned ? 'text-white/90' : 'text-gray-500'
-                  }`}
-                >
-                  {achievement.description}
-                </p>
-
-                {!isEarned && (
-                  <div className="mt-3">
-                    <div className="w-full bg-gray-300 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">{progress}%</p>
+                <div className="text-center">
+                  <div className={`text-4xl sm:text-5xl mb-2 ${isUnlocked ? 'animate-bounce' : 'grayscale opacity-50'}`}>
+                    {achievement.icon}
                   </div>
-                )}
-              </div>
-            );
+                  <h3 className={`font-bold text-xs sm:text-sm mb-1 ${
+                    isUnlocked ? 'text-white' : 'text-gray-600'
+                  }`}>
+                    {achievement.name}
+                  </h3>
+                  {!isUnlocked && (
+                    <div className="mt-2">
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
+                        <div
+                          className="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-500"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {Math.round(progress)}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </button>
+            )
           })}
         </div>
-
-        {unlockedCount === totalCount && (
-          <div className="mt-6 p-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl text-center">
-            <p className="text-white font-bold text-base sm:text-lg">
-              🎉 Поздравляем! Все достижения разблокированы! 🎉
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Modal */}
+      {/* Модальное окно с деталями достижения */}
       {selectedAchievement && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fadeIn"
           onClick={() => setSelectedAchievement(null)}
         >
-          <div
-            className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 relative animate-scale-in"
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-scaleIn"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={() => setSelectedAchievement(null)}
-              className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-
-            <div className="flex flex-col items-center text-center">
-              <div
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mb-4 shadow-xl"
-                style={{
-                  background: `linear-gradient(135deg, ${
-                    selectedAchievement.color.includes('yellow')
-                      ? '#fbbf24, #f59e0b'
-                      : selectedAchievement.color.includes('blue')
-                      ? '#60a5fa, #2563eb'
-                      : selectedAchievement.color.includes('green')
-                      ? '#4ade80, #16a34a'
-                      : selectedAchievement.color.includes('purple')
-                      ? '#c084fc, #9333ea'
-                      : selectedAchievement.color.includes('pink')
-                      ? '#f472b6, #db2777'
-                      : '#fbbf24, #d97706'
-                  })`,
-                }}
-              >
-                <div className="text-white scale-150">
-                  {selectedAchievement.icon}
-                </div>
-              </div>
-
-              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                {selectedAchievement.title}
-              </h3>
-
-              <p className="text-base sm:text-lg text-gray-600 mb-4">
-                {selectedAchievement.description}
-              </p>
-
-              <div className="w-full bg-gray-100 rounded-xl p-4 mb-4">
-                <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
-                  {selectedAchievement.detailedDescription}
-                </p>
-              </div>
-
-              {isAchievementEarned(selectedAchievement) ? (
-                <div className="w-full bg-green-50 border-2 border-green-200 rounded-xl p-4">
-                  <p className="text-green-700 font-semibold flex items-center justify-center gap-2">
-                    <Trophy className="w-5 h-5" />
-                    Достижение получено!
-                  </p>
-                </div>
-              ) : (
-                <div className="w-full">
-                  <div className="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Прогресс</span>
-                    <span className="font-semibold">{getAchievementProgress(selectedAchievement)}%</span>
+            {(() => {
+              const { isUnlocked, progress, current } = getAchievementStatus(selectedAchievement)
+              
+              return (
+                <>
+                  {/* Заголовок с градиентом */}
+                  <div className={`bg-gradient-to-br ${selectedAchievement.color} p-6 sm:p-8 text-white relative`}>
+                    <button
+                      onClick={() => setSelectedAchievement(null)}
+                      className="absolute top-4 right-4 text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-all"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    
+                    <div className="text-center">
+                      <div className={`text-7xl mb-4 ${isUnlocked ? 'animate-bounce' : 'grayscale opacity-70'}`}>
+                        {selectedAchievement.icon}
+                      </div>
+                      <h3 className="text-2xl sm:text-3xl font-bold mb-2">
+                        {selectedAchievement.name}
+                      </h3>
+                      <p className="text-white text-opacity-90 text-sm sm:text-base">
+                        {selectedAchievement.description}
+                      </p>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${getAchievementProgress(selectedAchievement)}%` }}
-                    />
+
+                  {/* Контент */}
+                  <div className="p-6 sm:p-8">
+                    {isUnlocked ? (
+                      <>
+                        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6 text-center">
+                          <div className="text-4xl mb-2">🎉</div>
+                          <p className="text-green-700 font-bold text-lg">
+                            Достижение получено!
+                          </p>
+                        </div>
+                        <p className="text-gray-700 text-center leading-relaxed">
+                          {selectedAchievement.detailedDescription}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-600">
+                              Прогресс
+                            </span>
+                            <span className="text-sm font-bold text-purple-600">
+                              {current} / {selectedAchievement.threshold}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3 sm:h-4 overflow-hidden">
+                            <div
+                              className="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <p className="text-xs sm:text-sm text-gray-500 mt-2 text-center">
+                            Ещё {selectedAchievement.threshold - current} до достижения
+                          </p>
+                        </div>
+                        <p className="text-gray-600 text-center text-sm sm:text-base">
+                          {selectedAchievement.detailedDescription}
+                        </p>
+                      </>
+                    )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {selectedAchievement.type === 'points'
-                      ? `Ещё ${selectedAchievement.requirement - totalPoints} баллов до достижения`
-                      : `Ещё ${selectedAchievement.requirement - completedTasksCount} задач до достижения`}
-                  </p>
-                </div>
-              )}
-            </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       )}
 
       <style>{`
-        @keyframes scale-in {
-          from {
-            transform: scale(0.9);
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+          from { 
             opacity: 0;
+            transform: scale(0.9);
           }
-          to {
-            transform: scale(1);
+          to { 
             opacity: 1;
+            transform: scale(1);
           }
         }
-        .animate-scale-in {
-          animation: scale-in 0.2s ease-out;
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+        
+        .animate-scaleIn {
+          animation: scaleIn 0.3s ease-out;
         }
       `}</style>
     </>
-  );
+  )
 }

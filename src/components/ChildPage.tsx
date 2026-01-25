@@ -1,487 +1,423 @@
-import { useState, useEffect } from 'react';
-import { CheckCircle2, Circle, Award, Star, TrendingUp, Calendar, Target } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import type { Database } from '../lib/database.types';
-import { AchievementsBadge } from './AchievementsBadge';
+import { useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import type { Database } from '../lib/database.types'
+import AchievementsBadge from './AchievementsBadge'
 
-type Child = Database['public']['Tables']['children']['Row'];
-type Task = Database['public']['Tables']['tasks']['Row'];
-type Sprint = Database['public']['Tables']['sprints']['Row'];
+type Child = Database['public']['Tables']['children']['Row']
+type Task = Database['public']['Tables']['tasks']['Row']
+type Sprint = Database['public']['Tables']['sprints']['Row']
 
-interface ChildPageProps {
-  accessCode: string;
-}
+// Коллекция нативных эмодзи (Unicode)
+const EMOJI_COLLECTION = [
+  // Смайлики и эмоции
+  '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃',
+  '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙',
+  '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔',
+  '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥',
+  '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮',
+  
+  // Животные
+  '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯',
+  '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐦', '🐤', '🦆',
+  '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋',
+  '🐌', '🐞', '🐜', '🦟', '🦗', '🕷', '🦂', '🐢', '🐍', '🦎',
+  '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟',
+  
+  // Еда и напитки
+  '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈',
+  '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦',
+  '🥬', '🥒', '🌶', '🌽', '🥕', '🥔', '🍠', '🥐', '🥯', '🍞',
+  '🥖', '🥨', '🧀', '🥚', '🍳', '🥞', '🥓', '🥩', '🍗', '🍖',
+  '🌭', '🍔', '🍟', '🍕', '🥪', '🥙', '🌮', '🌯', '🥗', '🥘',
+  
+  // Предметы и символы
+  '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱',
+  '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '⛳', '🏹', '🎣', '🥊',
+  '🥋', '🎽', '⛸', '🥌', '🛷', '🎿', '⛷', '🏂', '🏋', '🤼',
+  '🎮', '🕹', '🎲', '🎯', '🎪', '🎨', '🎬', '🎤', '🎧', '🎼',
+  '🎹', '🥁', '🎷', '🎺', '🎸', '🎻', '🎭', '🎪', '🎨', '🎬',
+  
+  // Природа и погода
+  '🌸', '🌺', '🌻', '🌷', '🌹', '🥀', '🌼', '🌵', '🌲', '🌳',
+  '🌴', '🌱', '🌿', '☘', '🍀', '🍁', '🍂', '🍃', '🌾', '🌺',
+  '⭐', '🌟', '✨', '⚡', '☄', '💥', '🔥', '🌈', '☀', '🌤',
+  '⛅', '🌥', '☁', '🌦', '🌧', '⛈', '🌩', '🌨', '❄', '☃',
+  
+  // Сердечки и символы
+  '❤', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
+  '❣', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮',
+  '✝', '☪', '🕉', '☸', '✡', '🔯', '🕎', '☯', '☦', '🛐',
+  '⚛', '🔮', '🎊', '🎉', '🎈', '🎁', '🏆', '🥇', '🥈', '🥉',
+]
 
-export function ChildPage({ accessCode }: ChildPageProps) {
-  const [child, setChild] = useState<Child | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+export default function ChildPage() {
+  const { childId } = useParams()
+  const navigate = useNavigate()
+  const [child, setChild] = useState<Child | null>(null)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [activeSprint, setActiveSprint] = useState<Sprint | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   useEffect(() => {
-    loadChildData();
-  }, [accessCode]);
+    if (!childId) {
+      navigate('/')
+      return
+    }
+
+    loadChildData()
+  }, [childId, navigate])
 
   const loadChildData = async () => {
+    if (!childId) return
+
+    setLoading(true)
+    
+    // Загрузить данные ребёнка
     const { data: childData, error: childError } = await supabase
       .from('children')
       .select('*')
-      .eq('access_code', accessCode)
-      .maybeSingle();
+      .eq('id', childId)
+      .single()
 
     if (childError || !childData) {
-      console.error('Error loading child:', childError);
-      setLoading(false);
-      return;
+      console.error('Error loading child:', childError)
+      navigate('/')
+      return
     }
 
-    setChild(childData);
+    setChild(childData)
 
-    // Загружаем активный спринт
+    // Загрузить активный спринт
     const { data: sprintData } = await supabase
       .from('sprints')
       .select('*')
-      .eq('child_id', childData.id)
+      .eq('child_id', childId)
       .eq('is_active', true)
-      .maybeSingle();
+      .single()
 
-    setActiveSprint(sprintData);
+    setActiveSprint(sprintData)
 
+    // Загрузить задачи
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
       .select('*')
-      .eq('child_id', childData.id)
-      .order('completed', { ascending: true })
-      .order('created_at', { ascending: false });
+      .eq('child_id', childId)
+      .order('created_at', { ascending: false })
 
     if (tasksError) {
-      console.error('Error loading tasks:', tasksError);
+      console.error('Error loading tasks:', tasksError)
     } else {
-      setTasks(tasksData || []);
+      setTasks(tasksData || [])
     }
 
-    setLoading(false);
-  };
+    setLoading(false)
+  }
 
-  const updateEmoji = async (emoji: string) => {
-    if (!child) return;
+  const toggleTask = async (taskId: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ is_completed: !currentStatus })
+      .eq('id', taskId)
+
+    if (!error) {
+      loadChildData()
+    }
+  }
+
+  const updateAvatar = async (emoji: string) => {
+    if (!childId) return
 
     const { error } = await supabase
       .from('children')
       .update({ avatar_emoji: emoji })
-      .eq('id', child.id);
+      .eq('id', childId)
 
-    if (error) {
-      console.error('Error updating emoji:', error);
-      return;
+    if (!error) {
+      setChild(prev => prev ? { ...prev, avatar_emoji: emoji } : null)
+      setShowEmojiPicker(false)
     }
-
-    setChild({ ...child, avatar_emoji: emoji });
-    setShowEmojiPicker(false);
-  };
-
-  const completeTask = async (task: Task) => {
-    if (task.completed || !child) return;
-
-    const now = new Date().toISOString();
-
-    const { error: taskError } = await supabase
-      .from('tasks')
-      .update({
-        completed: true,
-        completed_at: now,
-      })
-      .eq('id', task.id);
-
-    if (taskError) {
-      console.error('Error completing task:', taskError);
-      return;
-    }
-
-    const { error: childError } = await supabase
-      .from('children')
-      .update({
-        total_points: child.total_points + task.points,
-      })
-      .eq('id', child.id);
-
-    if (childError) {
-      console.error('Error updating points:', childError);
-      return;
-    }
-
-    setTasks(tasks.map(t =>
-      t.id === task.id
-        ? { ...t, completed: true, completed_at: now }
-        : t
-    ));
-
-    setChild({ ...child, total_points: child.total_points + task.points });
-  };
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-100 flex items-center justify-center">
-        <div className="text-2xl font-semibold text-gray-700">Загрузка...</div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Загрузка...</p>
+        </div>
       </div>
-    );
+    )
   }
 
   if (!child) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Страница не найдена</h1>
-          <p className="text-gray-600">Проверь свою ссылку</p>
+          <p className="text-xl text-gray-600">Ребёнок не найден</p>
         </div>
       </div>
-    );
+    )
   }
 
-  const completedTasks = tasks.filter(t => t.completed);
-  const pendingTasks = tasks.filter(t => !t.completed);
-  const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0;
-
-  // Задачи текущего спринта
-  const sprintTasks = activeSprint ? tasks.filter(t => t.sprint_id === activeSprint.id) : [];
-  const sprintCompletedTasks = sprintTasks.filter(t => t.completed);
-  const sprintPendingTasks = sprintTasks.filter(t => !t.completed);
-  const sprintProgress = sprintTasks.length > 0 ? Math.round((sprintCompletedTasks.length / sprintTasks.length) * 100) : 0;
-  const sprintPoints = sprintCompletedTasks.reduce((sum, t) => sum + t.points, 0);
-
-  const getDaysLeft = () => {
-    if (!activeSprint) return 0;
-    const end = new Date(activeSprint.end_date);
-    const today = new Date();
-    const diff = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(0, diff);
-  };
+  const completedTasks = tasks.filter(t => t.is_completed)
+  const sprintTasks = tasks.filter(t => t.sprint_id === activeSprint?.id)
+  const completedSprintTasks = sprintTasks.filter(t => t.is_completed)
+  const otherTasks = tasks.filter(t => !t.sprint_id || t.sprint_id !== activeSprint?.id)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-100">
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
-        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 mb-6">
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mb-6">
-            <div className="relative group">
-              <div
-                onClick={() => setShowEmojiPicker(true)}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center font-bold text-3xl sm:text-4xl shadow-lg flex-shrink-0 cursor-pointer transition-transform hover:scale-110"
-                style={{ backgroundColor: child.avatar_color }}
-              >
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Шапка с аватаром */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+            {/* Аватар с возможностью смены */}
+            <div 
+              className="relative group cursor-pointer"
+              onClick={() => setShowEmojiPicker(true)}
+            >
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-4xl sm:text-5xl font-bold text-white shadow-lg transition-transform group-hover:scale-105">
                 {child.avatar_emoji || child.name.charAt(0).toUpperCase()}
               </div>
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white text-xs sm:text-sm font-semibold">
-                Изменить
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 rounded-full flex items-center justify-center transition-all">
+                <span className="text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                  Изменить
+                </span>
               </div>
             </div>
-            <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">Привет, {child.name}!</h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">Вот твои задачи на сегодня</p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 sm:p-5 text-white">
-              <div className="flex items-center gap-2 mb-2">
-                <Star className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="text-xs sm:text-sm font-medium opacity-90">Баллы</span>
-              </div>
-              <p className="text-2xl sm:text-3xl font-bold">{child.total_points}</p>
+            <div className="text-center sm:text-left flex-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
+                Привет, {child.name}! 👋
+              </h1>
+              <p className="text-base sm:text-lg text-gray-600">
+                Твои задачи и достижения
+              </p>
             </div>
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 sm:p-5 text-white">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="text-xs sm:text-sm font-medium opacity-90">Выполнено</span>
+
+            {/* Статистика */}
+            <div className="flex gap-3 sm:gap-4">
+              <div className="bg-gradient-to-br from-yellow-400 to-orange-400 rounded-xl p-3 sm:p-4 text-center shadow-lg min-w-[80px] sm:min-w-[100px]">
+                <div className="text-2xl sm:text-3xl font-bold text-white">{child.total_points}</div>
+                <div className="text-xs sm:text-sm text-white opacity-90">Баллов</div>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold">{completedTasks.length}</p>
-            </div>
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 sm:p-5 text-white">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="text-xs sm:text-sm font-medium opacity-90">Прогресс</span>
+              <div className="bg-gradient-to-br from-green-400 to-emerald-400 rounded-xl p-3 sm:p-4 text-center shadow-lg min-w-[80px] sm:min-w-[100px]">
+                <div className="text-2xl sm:text-3xl font-bold text-white">{completedTasks.length}</div>
+                <div className="text-xs sm:text-sm text-white opacity-90">Выполнено</div>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold">{completionRate}%</p>
             </div>
           </div>
         </div>
 
-        {activeSprint && sprintTasks.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 mb-6">
-            <div className="flex flex-col sm:flex-row items-start justify-between mb-6 gap-4">
-              <div className="w-full sm:flex-1">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-start gap-2">
-                  <Calendar className="w-6 h-6 sm:w-7 sm:h-7 text-indigo-600 flex-shrink-0 mt-1" />
-                  <span className="break-words">Текущий спринт: {activeSprint.name}</span>
+        {/* Достижения */}
+        <AchievementsBadge tasks={tasks} totalPoints={child.total_points} />
+
+        {/* Активный спринт */}
+        {activeSprint && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
+            <div className="flex items-center gap-3 mb-4 sm:mb-6">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                <span className="text-xl sm:text-2xl">🎯</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 truncate">
+                  {activeSprint.name}
                 </h2>
-                {activeSprint.goal && (
-                  <div className="flex items-start gap-2 mt-2 text-gray-600">
-                    <Target className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm sm:text-base lg:text-lg break-words">{activeSprint.goal}</p>
-                  </div>
-                )}
+                <p className="text-sm sm:text-base text-gray-600 truncate">
+                  {activeSprint.goal}
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4 sm:p-5 text-white">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm font-medium opacity-90">Осталось</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold">{getDaysLeft()} дн.</p>
+            {/* Прогресс спринта */}
+            <div className="bg-gray-100 rounded-xl p-4 mb-4 sm:mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                <span className="text-sm sm:text-base font-medium text-gray-700">
+                  Прогресс: {completedSprintTasks.length} из {sprintTasks.length}
+                </span>
+                <span className="text-sm sm:text-base font-bold text-purple-600">
+                  {sprintTasks.length > 0 
+                    ? Math.round((completedSprintTasks.length / sprintTasks.length) * 100)
+                    : 0}%
+                </span>
               </div>
-              <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 sm:p-5 text-white">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm font-medium opacity-90">Прогресс</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold">{sprintProgress}%</p>
-              </div>
-              <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-4 sm:p-5 text-white">
-                <div className="flex items-center gap-2 mb-2">
-                  <Star className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                  <span className="text-xs sm:text-sm font-medium opacity-90">Баллы</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold">{sprintPoints}</p>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <div className="flex items-center justify-between text-xs sm:text-sm mb-2 text-gray-600">
-                <span>Выполнено задач в спринте: {sprintCompletedTasks.length}/{sprintTasks.length}</span>
-                <span>{sprintProgress}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 sm:h-4">
+              <div className="w-full bg-gray-200 rounded-full h-3 sm:h-4 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full h-3 sm:h-4 transition-all duration-500"
-                  style={{ width: `${sprintProgress}%` }}
-                />
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${sprintTasks.length > 0 
+                      ? (completedSprintTasks.length / sprintTasks.length) * 100
+                      : 0}%`
+                  }}
+                ></div>
               </div>
             </div>
 
-            <p className="text-xs sm:text-sm text-gray-500 mt-4 break-words">
-              📅 {new Date(activeSprint.start_date).toLocaleDateString('ru-RU')} - {new Date(activeSprint.end_date).toLocaleDateString('ru-RU')}
-            </p>
+            {/* Даты */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <span>📅</span>
+                <span>Начало: {new Date(activeSprint.start_date).toLocaleDateString('ru-RU')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>🏁</span>
+                <span>Конец: {new Date(activeSprint.end_date).toLocaleDateString('ru-RU')}</span>
+              </div>
+            </div>
           </div>
         )}
 
-        {sprintPendingTasks.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Circle className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500 flex-shrink-0" />
+        {/* Задачи спринта */}
+        {activeSprint && sprintTasks.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2">
+              <span className="text-2xl">🎯</span>
               Задачи спринта
             </h2>
-            <div className="space-y-4">
-              {sprintPendingTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="p-4 sm:p-6 rounded-xl border-2 border-indigo-200 hover:border-indigo-300 transition-all bg-indigo-50/30"
-                >
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <button
-                      onClick={() => completeTask(task)}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-3 border-indigo-400 hover:border-green-500 hover:bg-green-50 transition-all flex items-center justify-center flex-shrink-0"
-                    >
-                      <Circle className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base sm:text-xl text-gray-900 mb-2 break-words">{task.title}</h3>
-                      {task.description && (
-                        <p className="text-sm sm:text-base text-gray-600 mb-3 break-words">{task.description}</p>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <div className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-1">
-                          <Award className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          {task.points} баллов
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div className="space-y-3 sm:space-y-4">
+              {sprintTasks.filter(t => !t.is_completed).map(task => (
+                <TaskCard key={task.id} task={task} onToggle={toggleTask} />
               ))}
             </div>
           </div>
         )}
 
-        {pendingTasks.filter(t => !t.sprint_id).length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <Circle className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" />
+        {/* Другие задачи */}
+        {otherTasks.filter(t => !t.is_completed).length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2">
+              <span className="text-2xl">📝</span>
               Другие задачи
             </h2>
-            <div className="space-y-4">
-              {pendingTasks.filter(t => !t.sprint_id).map((task) => (
-                <div
-                  key={task.id}
-                  className="p-4 sm:p-6 rounded-xl border-2 border-gray-200 hover:border-blue-300 transition-all bg-white"
-                >
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <button
-                      onClick={() => completeTask(task)}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-3 border-gray-300 hover:border-green-500 hover:bg-green-50 transition-all flex items-center justify-center flex-shrink-0"
-                    >
-                      <Circle className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base sm:text-xl text-gray-900 mb-2 break-words">{task.title}</h3>
-                      {task.description && (
-                        <p className="text-sm sm:text-base text-gray-600 mb-3 break-words">{task.description}</p>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-1">
-                          <Award className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          {task.points} баллов
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div className="space-y-3 sm:space-y-4">
+              {otherTasks.filter(t => !t.is_completed).map(task => (
+                <TaskCard key={task.id} task={task} onToggle={toggleTask} />
               ))}
             </div>
           </div>
         )}
 
+        {/* Выполненные задачи */}
         {completedTasks.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0" />
-              Выполненные задачи
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2">
+              <span className="text-2xl">✅</span>
+              Выполнено ({completedTasks.length})
             </h2>
-            <div className="space-y-3">
-              {completedTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="p-4 sm:p-5 rounded-xl bg-green-50 border-2 border-green-200"
-                >
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 flex-shrink-0 mt-1" />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-base sm:text-lg text-green-900 line-through break-words">
-                        {task.title}
-                      </h3>
-                      {task.description && (
-                        <p className="text-sm sm:text-base text-green-700 mt-1 break-words">{task.description}</p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2">
-                        <span className="text-xs sm:text-sm font-medium text-green-600">
-                          +{task.points} баллов
-                        </span>
-                        {task.completed_at && (
-                          <span className="text-xs sm:text-sm text-green-600">
-                            {new Date(task.completed_at).toLocaleDateString('ru-RU', {
-                              day: 'numeric',
-                              month: 'long',
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div className="space-y-3 sm:space-y-4">
+              {completedTasks.map(task => (
+                <TaskCard key={task.id} task={task} onToggle={toggleTask} />
               ))}
             </div>
-          </div>
-        )}
-
-        {tasks.length > 0 && (
-          <AchievementsBadge
-            totalPoints={child.total_points}
-            completedTasksCount={completedTasks.length}
-          />
-        )}
-
-        {tasks.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-12 text-center">
-            <Award className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Пока нет задач</h2>
-            <p className="text-sm sm:text-base text-gray-600">Скоро родители добавят задачи для тебя!</p>
           </div>
         )}
       </div>
 
-      {/* Emoji Picker Modal */}
+      {/* Модальное окно выбора эмодзи */}
       {showEmojiPicker && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
           onClick={() => setShowEmojiPicker(false)}
         >
-          <div
-            className="bg-white rounded-2xl max-w-md w-full p-6 animate-scale-in"
+          <div 
+            className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 text-center">
-              Выбери свой эмодзи! 😊
-            </h3>
-            <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 sm:gap-3 max-h-96 overflow-y-auto">
-              {[
-                '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
-                '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
-                '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜',
-                '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏',
-                '😒', '😞', '😔', '😟', '😕', '🙁', '😣', '😖',
-                '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡',
-                '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰',
-                '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶',
-                '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼',
-                '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
-                '🐧', '🐦', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗',
-                '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜',
-                '🦟', '🦗', '🕷', '🦂', '🐢', '🐍', '🦎', '🦖',
-                '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠',
-                '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆',
-                '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫',
-                '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏',
-                '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐈',
-                '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊', '🐇',
-                '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿',
-                '🌟', '⭐', '✨', '💫', '🌈', '🌸', '🌺', '🌻',
-                '🌼', '🌷', '🥀', '🌹', '💐', '🍀', '🌿', '🍃',
-                '🎨', '🎭', '🎪', '🎬', '🎤', '🎧', '🎼', '🎹',
-                '🎸', '🎺', '🎷', '🥁', '🎻', '🎲', '🎯', '🎮',
-                '🎰', '🎳', '🚀', '✈️', '🚁', '🛸', '🚂', '🚗',
-                '🏆', '🥇', '🥈', '🥉', '⚽', '🏀', '🏈', '⚾',
-                '🎾', '🏐', '🏉', '🥏', '🎱', '🏓', '🏸', '🏒',
-                '🍕', '🍔', '🍟', '🌭', '🍿', '🧃', '🍩', '🍪',
-                '🎂', '🍰', '🧁', '🍦', '🍨', '🍧', '🍭', '🍬',
-                '🔥', '💧', '⚡', '🌙', '☀️', '🌤️', '⛅', '🌦️',
-                '❤️', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎',
-                '💖', '💗', '💓', '💞', '💕', '💝', '💘', '💌',
-              ].map((emoji) => (
+            {/* Заголовок */}
+            <div className="p-4 sm:p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800">
+                  Выбери свой аватар 😊
+                </h3>
                 <button
-                  key={emoji}
-                  onClick={() => updateEmoji(emoji)}
-                  className="text-3xl sm:text-4xl p-2 hover:bg-gray-100 rounded-lg transition-colors hover:scale-110"
+                  onClick={() => setShowEmojiPicker(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  {emoji}
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
-              ))}
+              </div>
             </div>
-            <button
-              onClick={() => setShowEmojiPicker(false)}
-              className="mt-6 w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold transition-colors"
-            >
-              Отмена
-            </button>
+
+            {/* Сетка эмодзи */}
+            <div className="p-4 sm:p-6 overflow-y-auto">
+              <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 sm:gap-3">
+                {EMOJI_COLLECTION.map((emoji, index) => (
+                  <button
+                    key={index}
+                    onClick={() => updateAvatar(emoji)}
+                    className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-2xl sm:text-3xl hover:bg-gray-100 rounded-lg transition-all hover:scale-110 active:scale-95"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes scale-in {
-          from {
-            transform: scale(0.9);
-            opacity: 0;
-          }
-          to {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        .animate-scale-in {
-          animation: scale-in 0.2s ease-out;
-        }
-      `}</style>
     </div>
-  );
+  )
+}
+
+// Компонент карточки задачи
+function TaskCard({ task, onToggle }: { task: Task; onToggle: (id: string, status: boolean) => void }) {
+  return (
+    <div
+      onClick={() => onToggle(task.id, task.is_completed)}
+      className={`p-4 sm:p-5 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
+        task.is_completed
+          ? 'bg-green-50 border-green-200 opacity-75'
+          : 'bg-white border-gray-200 hover:border-purple-300'
+      }`}
+    >
+      <div className="flex items-start gap-3 sm:gap-4">
+        {/* Чекбокс */}
+        <div className="flex-shrink-0 pt-1">
+          <div
+            className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+              task.is_completed
+                ? 'bg-green-500 border-green-500'
+                : 'border-gray-300 hover:border-purple-500'
+            }`}
+          >
+            {task.is_completed && (
+              <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </div>
+        </div>
+
+        {/* Контент */}
+        <div className="flex-1 min-w-0">
+          <h3 className={`font-semibold text-base sm:text-lg break-words ${
+            task.is_completed ? 'line-through text-gray-500' : 'text-gray-800'
+          }`}>
+            {task.title}
+          </h3>
+          {task.description && (
+            <p className={`text-sm sm:text-base mt-1 break-words ${
+              task.is_completed ? 'text-gray-400' : 'text-gray-600'
+            }`}>
+              {task.description}
+            </p>
+          )}
+        </div>
+
+        {/* Баллы */}
+        <div className="flex-shrink-0">
+          <div className={`px-3 py-1 sm:px-4 sm:py-2 rounded-full font-bold text-sm sm:text-base ${
+            task.is_completed
+              ? 'bg-green-200 text-green-700'
+              : 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-md'
+          }`}>
+            {task.points} ⭐
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
