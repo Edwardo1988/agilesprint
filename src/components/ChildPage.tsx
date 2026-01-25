@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import AchievementsBadge from './AchievementsBadge'
@@ -52,8 +51,9 @@ const EMOJI_COLLECTION = [
 ]
 
 export default function ChildPage() {
-  const { childId } = useParams()
-  const navigate = useNavigate()
+  // Получаем childId из URL (например: /child/uuid)
+  const childId = window.location.pathname.split('/').pop()
+  
   const [child, setChild] = useState<Child | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null)
@@ -62,12 +62,11 @@ export default function ChildPage() {
 
   useEffect(() => {
     if (!childId) {
-      navigate('/')
       return
     }
 
     loadChildData()
-  }, [childId, navigate])
+  }, [childId])
 
   const loadChildData = async () => {
     if (!childId) return
@@ -83,7 +82,7 @@ export default function ChildPage() {
 
     if (childError || !childData) {
       console.error('Error loading child:', childError)
-      navigate('/')
+      setLoading(false)
       return
     }
 
