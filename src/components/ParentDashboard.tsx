@@ -101,7 +101,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       return Math.random().toString(36).substring(2, 10).toUpperCase();
     };
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('children')
       .insert([
         {
@@ -112,11 +112,21 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
           total_points: 0,
         }
       ])
+      .select()
+      .single()
 
-    if (!error) {
+    if (!error && data) {
+      // Оптимистичное обновление UI - добавляем ребёнка в список
+      setChildren(prevChildren => [...prevChildren, data])
+      
+      // Очистить форму
       setNewChildName('')
       setShowAddChild(false)
-      loadDashboardData()
+      
+      // Автоматически выбрать нового ребёнка
+      setSelectedChild(data.id)
+    } else if (error) {
+      console.error('Error adding child:', error)
     }
   }
 
@@ -126,34 +136,47 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     // Найти активный спринт для выбранного ребёнка
     const activeSprint = sprints.find(s => s.child_id === selectedChild && s.is_active)
 
-    const { error } = await supabase
-      .from('tasks')
-      .insert([
-        {
-          child_id: selectedChild,
-          title: newTaskTitle.trim(),
-          description: newTaskDescription.trim() || null,
-          points: newTaskPoints,
-          is_completed: false,
-          sprint_id: activeSprint?.id || null,
-        }
-      ])
+    const newTask = {
+      child_id: selectedChild,
+      title: newTaskTitle.trim(),
+      description: newTaskDescription.trim() || null,
+      points: newTaskPoints,
+      is_completed: false,
+      sprint_id: activeSprint?.id || null,
+    }
 
-    if (!error) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert([newTask])
+      .select()
+      .single()
+
+    if (!error && data) {
+      // Оптимистичное обновление UI - добавляем задачу в список
+      setTasks(prevTasks => [data, ...prevTasks])
+      
+      // Очистить форму
       setNewTaskTitle('')
       setNewTaskDescription('')
       setNewTaskPoints(10)
-      loadDashboardData()
+    } else if (error) {
+      console.error('Error adding task:', error)
+      // При ошибке можно показать уведомление пользователю
     }
   }
 
   const deleteTask = async (taskId: string) => {
+    // Оптимистичное обновление UI - сразу удаляем из списка
+    setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId))
+
     const { error } = await supabase
       .from('tasks')
       .delete()
       .eq('id', taskId)
 
-    if (!error) {
+    if (error) {
+      console.error('Error deleting task:', error)
+      // При ошибке перезагрузить данные чтобы восстановить корректное состояние
       loadDashboardData()
     }
   }
