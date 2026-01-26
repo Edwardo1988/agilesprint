@@ -7,10 +7,6 @@ type Child = Database['public']['Tables']['children']['Row']
 type Task = Database['public']['Tables']['tasks']['Row']
 type Sprint = Database['public']['Tables']['sprints']['Row']
 
-interface ChildPageProps {
-  accessCode: string
-}
-
 // Коллекция нативных эмодзи (Unicode)
 const EMOJI_COLLECTION = [
   // Смайлики и эмоции
@@ -54,7 +50,10 @@ const EMOJI_COLLECTION = [
   '⚛', '🔮', '🎊', '🎉', '🎈', '🎁', '🏆', '🥇', '🥈', '🥉',
 ]
 
-export default function ChildPage({ accessCode }: ChildPageProps) {
+export default function ChildPage() {
+  // Получаем childId из URL (например: /child/uuid)
+  const childId = window.location.pathname.split('/').pop()
+  
   const [child, setChild] = useState<Child | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null)
@@ -62,23 +61,23 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   useEffect(() => {
-    if (!accessCode) {
+    if (!childId) {
       return
     }
 
     loadChildData()
-  }, [accessCode])
+  }, [childId])
 
   const loadChildData = async () => {
-    if (!accessCode) return
+    if (!childId) return
 
     setLoading(true)
     
-    // Загрузить данные ребёнка по коду доступа
+    // Загрузить данные ребёнка
     const { data: childData, error: childError } = await supabase
       .from('children')
       .select('*')
-      .eq('access_code', accessCode)
+      .eq('id', childId)
       .single()
 
     if (childError || !childData) {
@@ -93,7 +92,7 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
     const { data: sprintData } = await supabase
       .from('sprints')
       .select('*')
-      .eq('child_id', childData.id)
+      .eq('child_id', childId)
       .eq('is_active', true)
       .single()
 
@@ -103,7 +102,7 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
       .select('*')
-      .eq('child_id', childData.id)
+      .eq('child_id', childId)
       .order('created_at', { ascending: false })
 
     if (tasksError) {
@@ -116,46 +115,23 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
   }
 
   const toggleTask = async (taskId: string, currentStatus: boolean) => {
-    if (!child) return
-
-    const task = tasks.find(t => t.id === taskId)
-    if (!task) return
-
-    const newStatus = !currentStatus
-    const pointsChange = newStatus ? task.points : -task.points
-
-    // Обновить статус задачи
-    const { error: taskError } = await supabase
+    const { error } = await supabase
       .from('tasks')
-      .update({ is_completed: newStatus })
+      .update({ is_completed: !currentStatus })
       .eq('id', taskId)
 
-    if (taskError) {
-      console.error('Error updating task:', taskError)
-      return
+    if (!error) {
+      loadChildData()
     }
-
-    // Обновить баллы ребёнка
-    const { error: childError } = await supabase
-      .from('children')
-      .update({ total_points: child.total_points + pointsChange })
-      .eq('id', child.id)
-
-    if (childError) {
-      console.error('Error updating points:', childError)
-    }
-
-    // Перезагрузить данные
-    loadChildData()
   }
 
   const updateAvatar = async (emoji: string) => {
-    if (!child) return
+    if (!childId) return
 
     const { error } = await supabase
       .from('children')
       .update({ avatar_emoji: emoji })
-      .eq('id', child.id)
+      .eq('id', childId)
 
     if (!error) {
       setChild(prev => prev ? { ...prev, avatar_emoji: emoji } : null)
@@ -390,7 +366,6 @@ function TaskCard({ task, onToggle }: { task: Task; onToggle: (id: string, statu
   return (
     <div
       onClick={() => onToggle(task.id, task.is_completed)}
-      style={{ pointerEvents: 'auto' }}
       className={`p-4 sm:p-5 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
         task.is_completed
           ? 'bg-green-50 border-green-200 opacity-75'
