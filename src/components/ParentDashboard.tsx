@@ -211,10 +211,6 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       console.error('Error creating task instance:', error)
     }
   }
-      console.error('Error adding task:', error)
-      // При ошибке можно показать уведомление пользователю
-    }
-  }
 
   const deleteTask = async (taskId: string) => {
     // Оптимистичное обновление UI - сразу удаляем из списка
