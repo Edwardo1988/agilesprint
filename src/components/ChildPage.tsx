@@ -340,7 +340,11 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
         </div>
 
         {/* Достижения */}
-        <AchievementsBadge tasks={tasks} totalPoints={child.total_points} />
+        <AchievementsBadge 
+          tasks={tasks} 
+          totalPoints={child.total_points} 
+          activeSprint={activeSprint}
+        />
 
         {/* Активный спринт */}
         {activeSprint && (
