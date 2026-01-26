@@ -116,14 +116,37 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
   }
 
   const toggleTask = async (taskId: string, currentStatus: boolean) => {
-    const { error } = await supabase
+    if (!child) return
+
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+
+    const newStatus = !currentStatus
+    const pointsChange = newStatus ? task.points : -task.points
+
+    // Обновить статус задачи
+    const { error: taskError } = await supabase
       .from('tasks')
-      .update({ is_completed: !currentStatus })
+      .update({ is_completed: newStatus })
       .eq('id', taskId)
 
-    if (!error) {
-      loadChildData()
+    if (taskError) {
+      console.error('Error updating task:', taskError)
+      return
     }
+
+    // Обновить баллы ребёнка
+    const { error: childError } = await supabase
+      .from('children')
+      .update({ total_points: child.total_points + pointsChange })
+      .eq('id', child.id)
+
+    if (childError) {
+      console.error('Error updating points:', childError)
+    }
+
+    // Перезагрузить данные
+    loadChildData()
   }
 
   const updateAvatar = async (emoji: string) => {
@@ -367,6 +390,7 @@ function TaskCard({ task, onToggle }: { task: Task; onToggle: (id: string, statu
   return (
     <div
       onClick={() => onToggle(task.id, task.is_completed)}
+      style={{ pointerEvents: 'auto' }}
       className={`p-4 sm:p-5 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
         task.is_completed
           ? 'bg-green-50 border-green-200 opacity-75'
