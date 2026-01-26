@@ -358,8 +358,14 @@ export default function AchievementsBadge({ tasks, totalPoints, activeSprint }: 
 
       {/* Модальное окно достижения */}
       {selectedAchievement && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-scaleIn">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fadeIn"
+          onClick={() => setSelectedAchievement(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
             {(() => {
               const isSprintAchievement = selectedAchievement.type === 'sprint'
               const { isUnlocked, progress, current } = isSprintAchievement
