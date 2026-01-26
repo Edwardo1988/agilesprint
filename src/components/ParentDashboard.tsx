@@ -39,6 +39,14 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrencePattern, setRecurrencePattern] = useState('daily')
   const [selectedDays, setSelectedDays] = useState<string[]>([])
+  
+  // Модальное окно кода доступа
+  const [showAccessCodeModal, setShowAccessCodeModal] = useState(false)
+  const [selectedChildForCode, setSelectedChildForCode] = useState<Child | null>(null)
+  const [emailAddress, setEmailAddress] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const [copiedCode, setCopiedCode] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
@@ -228,6 +236,69 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     }
   }
 
+  const openAccessCodeModal = (child: Child) => {
+    setSelectedChildForCode(child)
+    setShowAccessCodeModal(true)
+    setEmailAddress('')
+    setEmailSent(false)
+    setCopiedCode(false)
+  }
+
+  const closeAccessCodeModal = () => {
+    setShowAccessCodeModal(false)
+    setSelectedChildForCode(null)
+    setEmailAddress('')
+    setEmailSent(false)
+    setCopiedCode(false)
+  }
+
+  const copyAccessCode = async () => {
+    if (!selectedChildForCode) return
+    
+    try {
+      const url = `${window.location.origin}/?child=${selectedChildForCode.access_code}`
+      await navigator.clipboard.writeText(url)
+      setCopiedCode(true)
+      setTimeout(() => setCopiedCode(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const sendAccessCodeEmail = async () => {
+    if (!selectedChildForCode || !emailAddress.trim()) return
+    
+    setSendingEmail(true)
+    
+    try {
+      const url = `${window.location.origin}/?child=${selectedChildForCode.access_code}`
+      const subject = `Код доступа AgileSprint для ${selectedChildForCode.name}`
+      const body = `Привет!
+
+Вот твоя персональная страница в AgileSprint:
+${url}
+
+Открой эту ссылку чтобы увидеть свои задачи и достижения!
+
+Имя: ${selectedChildForCode.name}
+Код доступа: ${selectedChildForCode.access_code}
+
+Удачи! 🚀`
+      
+      // Открываем почтовый клиент
+      window.location.href = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+      
+      setEmailSent(true)
+      setTimeout(() => {
+        closeAccessCodeModal()
+      }, 2000)
+    } catch (err) {
+      console.error('Error sending email:', err)
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
   const selectedChildData = children.find(c => c.id === selectedChild)
   // Фильтруем: не показываем родительские шаблоны (is_recurring = true), только экземпляры
   const childTasks = tasks.filter(t => t.child_id === selectedChild && !t.is_recurring)
@@ -303,15 +374,26 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
                       <p className="text-sm sm:text-base text-gray-600">
                         {child.total_points} баллов
                       </p>
-                      <a
-                        href={`/?child=${child.access_code}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs sm:text-sm text-purple-600 hover:text-purple-700 hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Открыть страницу ребёнка →
-                      </a>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        <a
+                          href={`/?child=${child.access_code}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs sm:text-sm text-purple-600 hover:text-purple-700 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Открыть страницу →
+                        </a>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openAccessCodeModal(child)
+                          }}
+                          className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                        >
+                          🔑 Код доступа
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -616,6 +698,115 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
               >
                 Добавить
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно кода доступа */}
+      {showAccessCodeModal && selectedChildForCode && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={closeAccessCodeModal}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Заголовок */}
+            <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 text-white relative">
+              <button
+                onClick={closeAccessCodeModal}
+                className="absolute top-4 right-4 text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-all"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              
+              <div className="text-center">
+                <div className="text-5xl mb-3">🔑</div>
+                <h3 className="text-2xl font-bold mb-2">
+                  Код доступа
+                </h3>
+                <p className="text-white text-opacity-90">
+                  для {selectedChildForCode.name}
+                </p>
+              </div>
+            </div>
+
+            {/* Контент */}
+            <div className="p-6">
+              {/* Код доступа */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Код доступа:
+                </label>
+                <div className="flex gap-2">
+                  <div className="flex-1 px-4 py-3 bg-gray-100 rounded-xl font-mono text-2xl font-bold text-center text-purple-600 border-2 border-gray-200">
+                    {selectedChildForCode.access_code}
+                  </div>
+                  <button
+                    onClick={copyAccessCode}
+                    className="px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold"
+                  >
+                    {copiedCode ? '✓' : '📋'}
+                  </button>
+                </div>
+                {copiedCode && (
+                  <p className="text-sm text-green-600 mt-2 text-center">
+                    ✓ Ссылка скопирована!
+                  </p>
+                )}
+              </div>
+
+              {/* Ссылка */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ссылка для ребёнка:
+                </label>
+                <div className="px-4 py-3 bg-gray-50 rounded-xl text-sm text-gray-600 break-all border border-gray-200">
+                  {window.location.origin}/?child={selectedChildForCode.access_code}
+                </div>
+              </div>
+
+              {/* Email форма */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Отправить на email:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={emailAddress}
+                    onChange={(e) => setEmailAddress(e.target.value)}
+                    placeholder="email@example.com"
+                    className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                  />
+                  <button
+                    onClick={sendAccessCodeEmail}
+                    disabled={!emailAddress.trim() || sendingEmail}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendingEmail ? '...' : '📧'}
+                  </button>
+                </div>
+                {emailSent && (
+                  <p className="text-sm text-green-600 mt-2 text-center">
+                    ✓ Почтовый клиент открыт!
+                  </p>
+                )}
+              </div>
+
+              {/* Инструкция */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+                <p className="font-semibold mb-2">💡 Как поделиться:</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Скопируйте ссылку кнопкой 📋</li>
+                  <li>Отправьте через мессенджер</li>
+                  <li>Или используйте email ☝️</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
