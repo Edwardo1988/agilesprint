@@ -193,7 +193,7 @@ export default function AchievementsBadge({ tasks, totalPoints }: AchievementsBa
                     </button>
                     
                     <div className="text-center">
-                      <div className={`text-7xl mb-4 ${isUnlocked ? 'animate-bounce' : 'grayscale opacity-70'}`}>
+                      <div className={`text-7xl mb-4 ${isUnlocked ? 'animate-bounce-twice' : 'grayscale opacity-70'}`}>
                         {selectedAchievement.icon}
                       </div>
                       <h3 className="text-2xl sm:text-3xl font-bold mb-2">
@@ -241,7 +241,7 @@ export default function AchievementsBadge({ tasks, totalPoints }: AchievementsBa
                           </p>
                         </div>
                         <p className="text-gray-600 text-center text-sm sm:text-base">
-                          {selectedAchievement.detailedDescription}
+                          {selectedAchievement.description}
                         </p>
                       </>
                     )}
@@ -270,12 +270,27 @@ export default function AchievementsBadge({ tasks, totalPoints }: AchievementsBa
           }
         }
         
+        @keyframes bounceTwice {
+          0%, 100% {
+            transform: translateY(0);
+            animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+          }
+          25% {
+            transform: translateY(-25%);
+            animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+          }
+        }
+        
         .animate-fadeIn {
           animation: fadeIn 0.2s ease-out;
         }
         
         .animate-scaleIn {
           animation: scaleIn 0.3s ease-out;
+        }
+        
+        .animate-bounce-twice {
+          animation: bounceTwice 1s ease-in-out 2;
         }
       `}</style>
     </>
