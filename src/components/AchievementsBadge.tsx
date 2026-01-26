@@ -138,7 +138,7 @@ export default function AchievementsBadge({ tasks, totalPoints }: AchievementsBa
                 }`}
               >
                 <div className="text-center">
-                  <div className={`text-4xl sm:text-5xl mb-2 ${isUnlocked ? 'animate-bounce' : 'grayscale opacity-50'}`}>
+                  <div className={`text-4xl sm:text-5xl mb-2 ${!isUnlocked && 'grayscale opacity-50'}`}>
                     {achievement.icon}
                   </div>
                   <h3 className={`font-bold text-xs sm:text-sm mb-1 ${
