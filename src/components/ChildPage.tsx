@@ -7,6 +7,10 @@ type Child = Database['public']['Tables']['children']['Row']
 type Task = Database['public']['Tables']['tasks']['Row']
 type Sprint = Database['public']['Tables']['sprints']['Row']
 
+interface ChildPageProps {
+  accessCode: string
+}
+
 // Коллекция нативных эмодзи (Unicode)
 const EMOJI_COLLECTION = [
   // Смайлики и эмоции
@@ -50,10 +54,7 @@ const EMOJI_COLLECTION = [
   '⚛', '🔮', '🎊', '🎉', '🎈', '🎁', '🏆', '🥇', '🥈', '🥉',
 ]
 
-export default function ChildPage() {
-  // Получаем childId из URL (например: /child/uuid)
-  const childId = window.location.pathname.split('/').pop()
-  
+export default function ChildPage({ accessCode }: ChildPageProps) {
   const [child, setChild] = useState<Child | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null)
@@ -61,48 +62,69 @@ export default function ChildPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   useEffect(() => {
-    if (!childId) {
-      return
-    }
-
-    loadChildData()
-  }, [childId])
-
-  const loadChildData = async () => {
-    if (!childId) return
-
-    setLoading(true)
-    
-    // Загрузить данные ребёнка
-    const { data: childData, error: childError } = await supabase
-      .from('children')
-      .select('*')
-      .eq('id', childId)
-      .single()
-
-    if (childError || !childData) {
-      console.error('Error loading child:', childError)
+    if (!accessCode) {
+      console.error('No access code provided')
       setLoading(false)
       return
     }
 
-    setChild(childData)
+    console.log('Loading child data for access code:', accessCode)
+    loadChildData()
+  }, [accessCode])
 
-    // Загрузить активный спринт
-    const { data: sprintData } = await supabase
+  const loadChildData = async () => {
+    if (!accessCode) {
+      console.error('loadChildData called without accessCode')
+      return
+    }
+
+    console.log('Starting loadChildData...')
+    setLoading(true)
+    
+    try {
+      // Загрузить данные ребёнка по коду доступа
+      console.log('Fetching child with access code:', accessCode)
+      const { data: childData, error: childError } = await supabase
+        .from('children')
+        .select('*')
+        .eq('access_code', accessCode)
+        .single()
+
+      if (childError) {
+        console.error('Error loading child:', childError)
+        setLoading(false)
+        return
+      }
+
+      if (!childData) {
+        console.error('No child found with this access code')
+        setLoading(false)
+        return
+      }
+
+      console.log('Child loaded:', childData)
+      setChild(childData)
+
+    // Загрузить активный спринт (может не быть, это нормально)
+    const { data: sprintData, error: sprintError } = await supabase
       .from('sprints')
       .select('*')
-      .eq('child_id', childId)
+      .eq('child_id', childData.id)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
 
-    setActiveSprint(sprintData)
+    if (sprintError) {
+      console.warn('Could not load sprint (table may not exist):', sprintError)
+      // Это не критично - спринты опциональны
+    } else {
+      setActiveSprint(sprintData)
+    }
 
     // Загрузить задачи
     const { data: tasksData, error: tasksError } = await supabase
       .from('tasks')
       .select('*')
-      .eq('child_id', childId)
+      .eq('child_id', childData.id)
       .order('created_at', { ascending: false })
 
     if (tasksError) {
@@ -112,26 +134,71 @@ export default function ChildPage() {
     }
 
     setLoading(false)
+    } catch (error) {
+      console.error('Unexpected error in loadChildData:', error)
+      setLoading(false)
+    }
   }
 
   const toggleTask = async (taskId: string, currentStatus: boolean) => {
-    const { error } = await supabase
+    if (!child) return
+
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+
+    const newStatus = !currentStatus
+    const pointsChange = newStatus ? task.points : -task.points
+
+    // Оптимистичное обновление UI
+    setTasks(prevTasks => 
+      prevTasks.map(t => 
+        t.id === taskId ? { ...t, is_completed: newStatus } : t
+      )
+    )
+    setChild(prev => 
+      prev ? { ...prev, total_points: prev.total_points + pointsChange } : null
+    )
+
+    // Обновить статус задачи в БД
+    const { error: taskError } = await supabase
       .from('tasks')
-      .update({ is_completed: !currentStatus })
+      .update({ is_completed: newStatus })
       .eq('id', taskId)
 
-    if (!error) {
+    if (taskError) {
+      console.error('Error updating task:', taskError)
+      // Откатить изменения при ошибке
+      setTasks(prevTasks => 
+        prevTasks.map(t => 
+          t.id === taskId ? { ...t, is_completed: currentStatus } : t
+        )
+      )
+      setChild(prev => 
+        prev ? { ...prev, total_points: prev.total_points - pointsChange } : null
+      )
+      return
+    }
+
+    // Обновить баллы ребёнка в БД
+    const { error: childError } = await supabase
+      .from('children')
+      .update({ total_points: child.total_points + pointsChange })
+      .eq('id', child.id)
+
+    if (childError) {
+      console.error('Error updating points:', childError)
+      // Перезагрузить данные при ошибке
       loadChildData()
     }
   }
 
   const updateAvatar = async (emoji: string) => {
-    if (!childId) return
+    if (!child) return
 
     const { error } = await supabase
       .from('children')
       .update({ avatar_emoji: emoji })
-      .eq('id', childId)
+      .eq('id', child.id)
 
     if (!error) {
       setChild(prev => prev ? { ...prev, avatar_emoji: emoji } : null)
@@ -366,6 +433,7 @@ function TaskCard({ task, onToggle }: { task: Task; onToggle: (id: string, statu
   return (
     <div
       onClick={() => onToggle(task.id, task.is_completed)}
+      style={{ pointerEvents: 'auto' }}
       className={`p-4 sm:p-5 rounded-xl border-2 cursor-pointer transition-all hover:shadow-md ${
         task.is_completed
           ? 'bg-green-50 border-green-200 opacity-75'
