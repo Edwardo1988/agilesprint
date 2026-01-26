@@ -189,7 +189,68 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
       console.error('Error updating points:', childError)
       // Перезагрузить данные при ошибке
       loadChildData()
+      return
     }
+
+    // Если это экземпляр регулярной задачи и он только что выполнен
+    if (newStatus && task.parent_task_id) {
+      await createNextRecurringInstance(task)
+    }
+  }
+
+  const createNextRecurringInstance = async (completedTask: Task) => {
+    if (!completedTask.parent_task_id) return
+
+    // Загрузить родительскую задачу
+    const { data: parentTask } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', completedTask.parent_task_id)
+      .single()
+
+    if (!parentTask || !parentTask.recurrence_pattern) return
+
+    // Проверить нужно ли создавать задачу на завтра
+    const shouldCreate = shouldCreateTaskForTomorrow(parentTask.recurrence_pattern)
+    
+    if (shouldCreate) {
+      // Создать новый экземпляр
+      const newInstance = {
+        child_id: completedTask.child_id,
+        title: completedTask.title,
+        description: completedTask.description,
+        points: completedTask.points,
+        is_completed: false,
+        is_recurring: false,
+        parent_task_id: parentTask.id,
+        sprint_id: completedTask.sprint_id,
+      }
+
+      const { error } = await supabase
+        .from('tasks')
+        .insert([newInstance])
+
+      if (!error) {
+        // Перезагрузить данные чтобы показать новый экземпляр
+        loadChildData()
+      }
+    }
+  }
+
+  const shouldCreateTaskForTomorrow = (pattern: string): boolean => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dayOfWeek = tomorrow.getDay() // 0 = Sunday, 6 = Saturday
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const tomorrowDay = dayNames[dayOfWeek]
+
+    if (pattern === 'daily') return true
+    if (pattern === 'weekdays') return dayOfWeek >= 1 && dayOfWeek <= 5
+    if (pattern === 'weekends') return dayOfWeek === 0 || dayOfWeek === 6
+    
+    // Custom days (comma-separated)
+    const days = pattern.split(',')
+    return days.includes(tomorrowDay)
   }
 
   const updateAvatar = async (emoji: string) => {
@@ -227,10 +288,12 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
     )
   }
 
-  const completedTasks = tasks.filter(t => t.is_completed)
-  const sprintTasks = tasks.filter(t => t.sprint_id === activeSprint?.id)
+  // Фильтруем задачи: не показываем родительские шаблоны (is_recurring = true)
+  const visibleTasks = tasks.filter(t => !t.is_recurring)
+  const completedTasks = visibleTasks.filter(t => t.is_completed)
+  const sprintTasks = visibleTasks.filter(t => t.sprint_id === activeSprint?.id)
   const completedSprintTasks = sprintTasks.filter(t => t.is_completed)
-  const otherTasks = tasks.filter(t => !t.sprint_id || t.sprint_id !== activeSprint?.id)
+  const otherTasks = visibleTasks.filter(t => !t.sprint_id || t.sprint_id !== activeSprint?.id)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4 sm:p-6 lg:p-8">

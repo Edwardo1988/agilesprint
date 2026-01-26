@@ -72,6 +72,9 @@ export interface Database {
           description: string | null
           points: number
           is_completed: boolean
+          is_recurring: boolean
+          recurrence_pattern: string | null
+          parent_task_id: string | null
           sprint_id: string | null
           created_at: string
         }
@@ -82,6 +85,9 @@ export interface Database {
           description?: string | null
           points?: number
           is_completed?: boolean
+          is_recurring?: boolean
+          recurrence_pattern?: string | null
+          parent_task_id?: string | null
           sprint_id?: string | null
           created_at?: string
         }
@@ -92,6 +98,9 @@ export interface Database {
           description?: string | null
           points?: number
           is_completed?: boolean
+          is_recurring?: boolean
+          recurrence_pattern?: string | null
+          parent_task_id?: string | null
           sprint_id?: string | null
           created_at?: string
         }
@@ -107,6 +116,12 @@ export interface Database {
             columns: ["sprint_id"]
             referencedRelation: "sprints"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
           }
         ]
       }
@@ -119,6 +134,8 @@ export interface Database {
           start_date: string
           end_date: string
           is_active: boolean
+          tasks_completed: number
+          points_earned: number
           created_at: string
         }
         Insert: {
@@ -129,6 +146,8 @@ export interface Database {
           start_date?: string
           end_date: string
           is_active?: boolean
+          tasks_completed?: number
+          points_earned?: number
           created_at?: string
         }
         Update: {
@@ -139,11 +158,56 @@ export interface Database {
           start_date?: string
           end_date?: string
           is_active?: boolean
+          tasks_completed?: number
+          points_earned?: number
           created_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "sprints_child_id_fkey"
+            columns: ["child_id"]
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      sprint_achievements: {
+        Row: {
+          id: string
+          sprint_id: string
+          child_id: string
+          achievement_type: string
+          achieved_at: string
+          value: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sprint_id: string
+          child_id: string
+          achievement_type: string
+          achieved_at?: string
+          value: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sprint_id?: string
+          child_id?: string
+          achievement_type?: string
+          achieved_at?: string
+          value?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprint_achievements_sprint_id_fkey"
+            columns: ["sprint_id"]
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sprint_achievements_child_id_fkey"
             columns: ["child_id"]
             referencedRelation: "children"
             referencedColumns: ["id"]

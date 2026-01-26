@@ -36,6 +36,9 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskDescription, setNewTaskDescription] = useState('')
   const [newTaskPoints, setNewTaskPoints] = useState(10)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrencePattern, setRecurrencePattern] = useState('daily')
+  const [selectedDays, setSelectedDays] = useState<string[]>([])
 
   useEffect(() => {
     loadDashboardData()
@@ -136,12 +139,24 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     // Найти активный спринт для выбранного ребёнка
     const activeSprint = sprints.find(s => s.child_id === selectedChild && s.is_active)
 
+    // Подготовить паттерн повторения
+    let finalRecurrencePattern = null
+    if (isRecurring) {
+      if (recurrencePattern === 'custom' && selectedDays.length > 0) {
+        finalRecurrencePattern = selectedDays.join(',')
+      } else if (recurrencePattern !== 'custom') {
+        finalRecurrencePattern = recurrencePattern
+      }
+    }
+
     const newTask = {
       child_id: selectedChild,
       title: newTaskTitle.trim(),
       description: newTaskDescription.trim() || null,
       points: newTaskPoints,
       is_completed: false,
+      is_recurring: isRecurring,
+      recurrence_pattern: finalRecurrencePattern,
       sprint_id: activeSprint?.id || null,
     }
 
@@ -152,14 +167,50 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       .single()
 
     if (!error && data) {
-      // Оптимистичное обновление UI - добавляем задачу в список
-      setTasks(prevTasks => [data, ...prevTasks])
+      // Если это регулярная задача, создать первый экземпляр
+      if (isRecurring && finalRecurrencePattern) {
+        await createTaskInstance(data)
+      } else {
+        // Обычная задача - добавляем в список
+        setTasks(prevTasks => [data, ...prevTasks])
+      }
       
       // Очистить форму
       setNewTaskTitle('')
       setNewTaskDescription('')
       setNewTaskPoints(10)
+      setIsRecurring(false)
+      setRecurrencePattern('daily')
+      setSelectedDays([])
+      
+      // Перезагрузить данные чтобы увидеть экземпляры
+      loadDashboardData()
     } else if (error) {
+      console.error('Error adding task:', error)
+    }
+  }
+
+  const createTaskInstance = async (parentTask: Task) => {
+    // Создать экземпляр задачи на сегодня
+    const instance = {
+      child_id: parentTask.child_id,
+      title: parentTask.title,
+      description: parentTask.description,
+      points: parentTask.points,
+      is_completed: false,
+      is_recurring: false,
+      parent_task_id: parentTask.id,
+      sprint_id: parentTask.sprint_id,
+    }
+
+    const { error } = await supabase
+      .from('tasks')
+      .insert([instance])
+
+    if (error) {
+      console.error('Error creating task instance:', error)
+    }
+  }
       console.error('Error adding task:', error)
       // При ошибке можно показать уведомление пользователю
     }
@@ -182,7 +233,8 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   }
 
   const selectedChildData = children.find(c => c.id === selectedChild)
-  const childTasks = tasks.filter(t => t.child_id === selectedChild)
+  // Фильтруем: не показываем родительские шаблоны (is_recurring = true), только экземпляры
+  const childTasks = tasks.filter(t => t.child_id === selectedChild && !t.is_recurring)
   const childSprints = sprints.filter(s => s.child_id === selectedChild)
   const activeSprint = childSprints.find(s => s.is_active)
 
@@ -346,6 +398,113 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
                     </button>
                   </div>
                 </div>
+
+                {/* Настройки регулярных задач */}
+                <div className="border-t-2 border-gray-200 pt-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isRecurring}
+                      onChange={(e) => setIsRecurring(e.target.checked)}
+                      className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    />
+                    <span className="font-medium text-gray-700">
+                      🔄 Повторяющаяся задача
+                    </span>
+                  </label>
+
+                  {isRecurring && (
+                    <div className="mt-4 ml-7 space-y-4 animate-fadeIn">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Паттерн повторения
+                        </label>
+                        <div className="space-y-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="recurrence"
+                              value="daily"
+                              checked={recurrencePattern === 'daily'}
+                              onChange={(e) => setRecurrencePattern(e.target.value)}
+                              className="w-4 h-4 text-purple-600"
+                            />
+                            <span className="text-gray-700">📅 Ежедневно</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="recurrence"
+                              value="weekdays"
+                              checked={recurrencePattern === 'weekdays'}
+                              onChange={(e) => setRecurrencePattern(e.target.value)}
+                              className="w-4 h-4 text-purple-600"
+                            />
+                            <span className="text-gray-700">💼 По будням (пн-пт)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="recurrence"
+                              value="weekends"
+                              checked={recurrencePattern === 'weekends'}
+                              onChange={(e) => setRecurrencePattern(e.target.value)}
+                              className="w-4 h-4 text-purple-600"
+                            />
+                            <span className="text-gray-700">🎉 Выходные (сб-вс)</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="recurrence"
+                              value="custom"
+                              checked={recurrencePattern === 'custom'}
+                              onChange={(e) => setRecurrencePattern(e.target.value)}
+                              className="w-4 h-4 text-purple-600"
+                            />
+                            <span className="text-gray-700">🎯 Выбранные дни</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {recurrencePattern === 'custom' && (
+                        <div className="ml-6 animate-fadeIn">
+                          <div className="flex flex-wrap gap-2">
+                            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day, idx) => {
+                              const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+                              const isSelected = selectedDays.includes(day)
+                              return (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setSelectedDays(selectedDays.filter(d => d !== day))
+                                    } else {
+                                      setSelectedDays([...selectedDays, day])
+                                    }
+                                  }}
+                                  className={`px-3 py-2 rounded-lg font-medium transition-all ${
+                                    isSelected
+                                      ? 'bg-purple-500 text-white shadow-md'
+                                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  {dayNames[idx]}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                        ℹ️ Регулярная задача будет автоматически создаваться для ребёнка по выбранному графику
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {activeSprint && (
                   <p className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
                     ℹ️ Задача будет автоматически добавлена в активный спринт "{activeSprint.name}"
