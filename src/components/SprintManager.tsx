@@ -14,6 +14,9 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
   const [showCreateSprint, setShowCreateSprint] = useState(false)
   const [newSprintName, setNewSprintName] = useState('')
   const [newSprintGoal, setNewSprintGoal] = useState('')
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editGoal, setEditGoal] = useState('')
 
   const activeSprint = sprints.find(s => s.is_active)
   const completedSprints = sprints.filter(s => !s.is_active)
@@ -66,6 +69,37 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
     }
   }
 
+  const startEditSprint = (sprint: Sprint) => {
+    setEditingSprint(sprint)
+    setEditName(sprint.name)
+    setEditGoal(sprint.goal || '')
+  }
+
+  const cancelEdit = () => {
+    setEditingSprint(null)
+    setEditName('')
+    setEditGoal('')
+  }
+
+  const saveSprint = async () => {
+    if (!editingSprint || !editName.trim()) return
+
+    const { error } = await supabase
+      .from('sprints')
+      .update({
+        name: editName.trim(),
+        goal: editGoal.trim() || null,
+      })
+      .eq('id', editingSprint.id)
+
+    if (!error) {
+      setEditingSprint(null)
+      setEditName('')
+      setEditGoal('')
+      onUpdate()
+    }
+  }
+
   const getDaysRemaining = (endDate: string) => {
     const end = new Date(endDate)
     const now = new Date()
@@ -89,24 +123,78 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
       {/* Активный спринт */}
       {activeSprint ? (
         <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-purple-200 rounded-xl p-4 sm:p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 break-words">
-                🎯 {activeSprint.name}
-              </h3>
-              {activeSprint.goal && (
-                <p className="text-sm sm:text-base text-gray-600 break-words">
-                  {activeSprint.goal}
-                </p>
-              )}
+          {editingSprint?.id === activeSprint.id ? (
+            /* Форма редактирования */
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Название спринта
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-500"
+                  placeholder="Название спринта"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Цель спринта
+                </label>
+                <textarea
+                  value={editGoal}
+                  onChange={(e) => setEditGoal(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-500 resize-none"
+                  placeholder="Цель спринта (необязательно)"
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={saveSprint}
+                  disabled={!editName.trim()}
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Сохранить
+                </button>
+                <button
+                  onClick={cancelEdit}
+                  className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                >
+                  Отмена
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => completeSprint(activeSprint.id)}
-              className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors shadow-md flex-shrink-0"
-            >
-              Завершить спринт
-            </button>
-          </div>
+          ) : (
+            /* Отображение спринта */
+            <>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 break-words">
+                    🎯 {activeSprint.name}
+                  </h3>
+                  {activeSprint.goal && (
+                    <p className="text-sm sm:text-base text-gray-600 break-words">
+                      {activeSprint.goal}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => startEditSprint(activeSprint)}
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors shadow-md"
+                  >
+                    ✏️ Редактировать
+                  </button>
+                  <button
+                    onClick={() => completeSprint(activeSprint.id)}
+                    className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors shadow-md"
+                  >
+                    ✓ Завершить спринт
+                  </button>
+                </div>
+              </div>
 
           {/* Статистика */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-4">
@@ -134,7 +222,8 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                 })}
               </div>
             </div>
-          </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="text-center py-8 sm:py-12 bg-gray-50 rounded-xl">
