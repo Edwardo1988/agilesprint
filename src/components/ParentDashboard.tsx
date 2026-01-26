@@ -47,6 +47,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   const [sendingEmail, setSendingEmail] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [copiedCode, setCopiedCode] = useState(false)
+  const [copiedParentCode, setCopiedParentCode] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
@@ -321,12 +322,49 @@ ${url}
       <div className="max-w-7xl mx-auto">
         {/* Заголовок */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-2">
-            AgileSprint 🎯
-          </h1>
-          <p className="text-base sm:text-lg text-gray-600">
-            Управление задачами для ваших детей
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-2">
+                AgileSprint 🎯
+              </h1>
+              <p className="text-base sm:text-lg text-gray-600">
+                Управление задачами для ваших детей
+              </p>
+            </div>
+            {/* Код доступа родителя */}
+            <div className="bg-white rounded-xl shadow-lg p-4 border-2 border-blue-200">
+              <p className="text-xs text-gray-600 mb-1">Ваш код доступа:</p>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xl font-bold text-blue-600">
+                  {accessCode}
+                </span>
+                <button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(accessCode)
+                      setCopiedParentCode(true)
+                      setTimeout(() => setCopiedParentCode(false), 2000)
+                    } catch (err) {
+                      console.error('Failed to copy:', err)
+                    }
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Скопировать код"
+                >
+                  {copiedParentCode ? '✓' : '📋'}
+                </button>
+              </div>
+              {copiedParentCode ? (
+                <p className="text-xs text-green-600 mt-1">
+                  ✓ Код скопирован!
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">
+                  Сохраните для входа с другого устройства
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Дети */}
