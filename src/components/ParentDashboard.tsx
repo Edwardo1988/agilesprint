@@ -381,7 +381,10 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
                             {task.points} ⭐
                           </div>
                           <button
-                            onClick={() => deleteTask(task.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteTask(task.id);
+                            }}
                             className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
