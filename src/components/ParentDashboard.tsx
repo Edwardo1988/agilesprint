@@ -61,6 +61,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   const [editIsRecurring, setEditIsRecurring] = useState(false)
   const [editRecurrencePattern, setEditRecurrencePattern] = useState('daily')
   const [editSelectedDays, setEditSelectedDays] = useState<string[]>([])
+  const [isSavingTask, setIsSavingTask] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
@@ -275,7 +276,9 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   }
 
   const saveTask = async () => {
-    if (!editingTask || !editTitle.trim()) return
+    if (!editingTask || !editTitle.trim() || isSavingTask) return
+
+    setIsSavingTask(true)
 
     const updates: any = {
       title: editTitle.trim(),
@@ -325,10 +328,14 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     if (error) {
       console.error('Error updating task:', error)
       // Перезагрузить данные при ошибке
-      loadDashboardData()
+      await loadDashboardData()
     } else {
+      // Перезагружаем данные чтобы получить актуальные значения из БД
+      await loadDashboardData()
       cancelEditTask()
     }
+    
+    setIsSavingTask(false)
   }
 
   const deleteTask = async (taskId: string) => {
@@ -1298,16 +1305,17 @@ ${url}
               <div className="flex gap-3">
                 <button
                   onClick={cancelEditTask}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                  disabled={isSavingTask}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Отмена
                 </button>
                 <button
                   onClick={saveTask}
-                  disabled={!editTitle.trim()}
+                  disabled={!editTitle.trim() || isSavingTask}
                   className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Сохранить
+                  {isSavingTask ? 'Сохранение...' : 'Сохранить'}
                 </button>
               </div>
             </div>
