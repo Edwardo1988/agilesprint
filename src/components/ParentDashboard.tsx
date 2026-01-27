@@ -887,7 +887,11 @@ ${url}
                             })() ? (
                               <div className="flex flex-col gap-1">
                                 <p className="flex items-center gap-1">
-                                  📅 Сегодня
+                                  📅 {new Date(task.created_at).toLocaleDateString('ru-RU', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: new Date(task.created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                  })}
                                   <span className="inline-block px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
                                     Перенесена
                                   </span>
