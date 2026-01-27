@@ -177,7 +177,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       is_recurring: isRecurring,
       recurrence_pattern: finalRecurrencePattern,
       sprint_id: activeSprint?.id || null,
-      original_date: new Date().toISOString(), // Устанавливаем изначальную дату
+      // original_date не устанавливаем - будет null для новых задач
     }
 
     const { data, error } = await supabase
@@ -221,7 +221,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       is_recurring: false,
       parent_task_id: parentTask.id,
       sprint_id: parentTask.sprint_id,
-      original_date: new Date().toISOString(), // Устанавливаем изначальную дату
+      // original_date не устанавливаем - будет null для новых экземпляров
     }
 
     const { error } = await supabase
@@ -829,7 +829,18 @@ ${url}
                           )}
                           {/* Дата задачи */}
                           <div className="text-xs text-gray-500 mt-1">
-                            {task.original_date && task.original_date !== task.created_at ? (
+                            {(() => {
+                              // Проверяем перенесена ли задача
+                              if (!task.original_date) return false
+                              
+                              const originalDate = new Date(task.original_date)
+                              originalDate.setHours(0, 0, 0, 0)
+                              
+                              const createdDate = new Date(task.created_at)
+                              createdDate.setHours(0, 0, 0, 0)
+                              
+                              return originalDate.getTime() !== createdDate.getTime()
+                            })() ? (
                               <div className="flex flex-col gap-1">
                                 <p className="flex items-center gap-1">
                                   📅 Сегодня

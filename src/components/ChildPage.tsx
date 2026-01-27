@@ -230,7 +230,7 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
         parent_task_id: parentTask.id,
         sprint_id: completedTask.sprint_id,
         created_at: tomorrow.toISOString(), // Устанавливаем на завтра
-        original_date: tomorrow.toISOString(), // Изначально планируется на завтра
+        // original_date не устанавливаем - created_at уже на завтра
       }
 
       const { error } = await supabase
