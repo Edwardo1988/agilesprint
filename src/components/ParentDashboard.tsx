@@ -51,6 +51,13 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   
   // Фильтр даты для задач
   const [selectedDate, setSelectedDate] = useState<string>('all')
+  
+  // Редактирование задачи
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editPoints, setEditPoints] = useState(10)
+  const [editDate, setEditDate] = useState('')
 
   useEffect(() => {
     loadDashboardData()
@@ -223,6 +230,67 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
 
     if (error) {
       console.error('Error creating task instance:', error)
+    }
+  }
+
+  const startEditTask = (task: Task) => {
+    setEditingTask(task)
+    setEditTitle(task.title)
+    setEditDescription(task.description || '')
+    setEditPoints(task.points)
+    // Форматируем дату для input type="date"
+    const taskDate = new Date(task.created_at)
+    setEditDate(taskDate.toISOString().split('T')[0])
+  }
+
+  const cancelEditTask = () => {
+    setEditingTask(null)
+    setEditTitle('')
+    setEditDescription('')
+    setEditPoints(10)
+    setEditDate('')
+  }
+
+  const saveTask = async () => {
+    if (!editingTask || !editTitle.trim()) return
+
+    const updates: any = {
+      title: editTitle.trim(),
+      description: editDescription.trim() || null,
+      points: editPoints,
+    }
+
+    // Если дата изменилась
+    const currentDate = new Date(editingTask.created_at).toISOString().split('T')[0]
+    if (editDate !== currentDate) {
+      const newDate = new Date(editDate)
+      newDate.setHours(0, 0, 0, 0)
+      updates.created_at = newDate.toISOString()
+      
+      // Если original_date еще не установлена, сохраняем старую дату
+      if (!editingTask.original_date) {
+        updates.original_date = editingTask.created_at
+      }
+    }
+
+    // Оптимистичное обновление UI
+    setTasks(prevTasks => prevTasks.map(t => 
+      t.id === editingTask.id 
+        ? { ...t, ...updates }
+        : t
+    ))
+
+    const { error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', editingTask.id)
+
+    if (error) {
+      console.error('Error updating task:', error)
+      // Перезагрузить данные при ошибке
+      loadDashboardData()
+    } else {
+      cancelEditTask()
     }
   }
 
@@ -799,9 +867,22 @@ ${url}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              startEditTask(task);
+                            }}
+                            className="text-blue-500 hover:text-blue-700 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Редактировать задачу"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               deleteTask(task.id);
                             }}
                             className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Удалить задачу"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -963,6 +1044,116 @@ ${url}
                   <li>Отправьте через мессенджер</li>
                   <li>Или используйте email ☝️</li>
                 </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно редактирования задачи */}
+      {editingTask && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={cancelEditTask}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Заголовок */}
+            <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 text-white relative">
+              <button
+                onClick={cancelEditTask}
+                className="absolute top-4 right-4 text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-all"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              
+              <div className="text-center">
+                <div className="text-5xl mb-3">✏️</div>
+                <h3 className="text-2xl font-bold mb-2">
+                  Редактировать задачу
+                </h3>
+              </div>
+            </div>
+
+            {/* Форма */}
+            <div className="p-6 space-y-4">
+              {/* Название */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Название задачи
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                  placeholder="Название задачи"
+                />
+              </div>
+
+              {/* Описание */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Описание (необязательно)
+                </label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 resize-none"
+                  placeholder="Описание задачи"
+                  rows={3}
+                />
+              </div>
+
+              {/* Баллы */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Баллы за выполнение
+                </label>
+                <input
+                  type="number"
+                  value={editPoints}
+                  onChange={(e) => setEditPoints(parseInt(e.target.value) || 0)}
+                  min="1"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                />
+              </div>
+
+              {/* Дата */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Дата задачи
+                </label>
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Измените дату, чтобы перенести задачу на другой день
+                </p>
+              </div>
+
+              {/* Кнопки */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={cancelEditTask}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={saveTask}
+                  disabled={!editTitle.trim()}
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Сохранить
+                </button>
               </div>
             </div>
           </div>
