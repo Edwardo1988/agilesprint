@@ -289,7 +289,23 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
   }
 
   // Фильтруем задачи: не показываем родительские шаблоны (is_recurring = true)
-  const visibleTasks = tasks.filter(t => !t.is_recurring)
+  // И показываем только задачи на сегодня
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  
+  const visibleTasks = tasks.filter(t => {
+    if (t.is_recurring) return false // Не показываем шаблоны
+    
+    // Проверяем дату создания задачи
+    const taskDate = new Date(t.created_at)
+    taskDate.setHours(0, 0, 0, 0)
+    
+    // Показываем только задачи созданные сегодня или раньше, но не завтрашние
+    return taskDate <= today
+  })
+  
   const completedTasks = visibleTasks.filter(t => t.is_completed)
   const sprintTasks = visibleTasks.filter(t => t.sprint_id === activeSprint?.id)
   const completedSprintTasks = sprintTasks.filter(t => t.is_completed)

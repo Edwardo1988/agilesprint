@@ -48,6 +48,9 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   const [emailSent, setEmailSent] = useState(false)
   const [copiedCode, setCopiedCode] = useState(false)
   const [copiedParentCode, setCopiedParentCode] = useState(false)
+  
+  // Фильтр даты для задач
+  const [selectedDate, setSelectedDate] = useState<string>('all')
 
   useEffect(() => {
     loadDashboardData()
@@ -629,15 +632,100 @@ ${url}
               </div>
             </div>
 
+            {/* Календарный фильтр */}
+            <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border-2 border-purple-200">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">📅</span>
+                <h3 className="font-semibold text-gray-700">Фильтр по дате</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedDate('all')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    selectedDate === 'all'
+                      ? 'bg-purple-500 text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Все задачи
+                </button>
+                <button
+                  onClick={() => setSelectedDate('today')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    selectedDate === 'today'
+                      ? 'bg-purple-500 text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Сегодня
+                </button>
+                <button
+                  onClick={() => setSelectedDate('tomorrow')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    selectedDate === 'tomorrow'
+                      ? 'bg-purple-500 text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Завтра
+                </button>
+                <button
+                  onClick={() => setSelectedDate('future')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    selectedDate === 'future'
+                      ? 'bg-purple-500 text-white shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  Будущие
+                </button>
+              </div>
+            </div>
+
             {/* Список задач */}
-            {childTasks.length === 0 ? (
+            {(() => {
+              // Фильтруем задачи по выбранной дате
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+              const tomorrow = new Date(today)
+              tomorrow.setDate(tomorrow.getDate() + 1)
+              const dayAfterTomorrow = new Date(tomorrow)
+              dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1)
+              
+              let filteredTasks = childTasks
+              
+              if (selectedDate === 'today') {
+                filteredTasks = childTasks.filter(task => {
+                  const taskDate = new Date(task.created_at)
+                  taskDate.setHours(0, 0, 0, 0)
+                  return taskDate.getTime() === today.getTime()
+                })
+              } else if (selectedDate === 'tomorrow') {
+                filteredTasks = childTasks.filter(task => {
+                  const taskDate = new Date(task.created_at)
+                  taskDate.setHours(0, 0, 0, 0)
+                  return taskDate.getTime() === tomorrow.getTime()
+                })
+              } else if (selectedDate === 'future') {
+                filteredTasks = childTasks.filter(task => {
+                  const taskDate = new Date(task.created_at)
+                  taskDate.setHours(0, 0, 0, 0)
+                  return taskDate.getTime() >= dayAfterTomorrow.getTime()
+                })
+              }
+              
+              return filteredTasks.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
-                <p className="text-lg">Пока нет задач</p>
-                <p className="text-sm mt-2">Добавьте первую задачу выше</p>
+                <p className="text-lg">
+                  {selectedDate === 'all' ? 'Пока нет задач' : 'Нет задач на выбранную дату'}
+                </p>
+                <p className="text-sm mt-2">
+                  {selectedDate === 'all' ? 'Добавьте первую задачу выше' : 'Выберите другую дату или добавьте новую задачу'}
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
-                {childTasks.map(task => {
+                {filteredTasks.map(task => {
                   const taskSprint = sprints.find(s => s.id === task.sprint_id)
                   return (
                     <div
@@ -669,6 +757,14 @@ ${url}
                               {task.description}
                             </p>
                           )}
+                          {/* Дата задачи */}
+                          <p className="text-xs text-gray-500 mt-1">
+                            📅 {new Date(task.created_at).toLocaleDateString('ru-RU', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: new Date(task.created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                            })}
+                          </p>
                         </div>
                         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
                           <div className={`px-3 py-1 sm:px-4 sm:py-2 rounded-full font-bold text-sm sm:text-base ${
@@ -695,7 +791,8 @@ ${url}
                   )
                 })}
               </div>
-            )}
+            )
+            })()}
           </div>
         )}
       </div>
