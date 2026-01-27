@@ -58,6 +58,9 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   const [editDescription, setEditDescription] = useState('')
   const [editPoints, setEditPoints] = useState(10)
   const [editDate, setEditDate] = useState('')
+  const [editIsRecurring, setEditIsRecurring] = useState(false)
+  const [editRecurrencePattern, setEditRecurrencePattern] = useState('daily')
+  const [editSelectedDays, setEditSelectedDays] = useState<string[]>([])
 
   useEffect(() => {
     loadDashboardData()
@@ -241,6 +244,23 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     // Форматируем дату для input type="date"
     const taskDate = new Date(task.created_at)
     setEditDate(taskDate.toISOString().split('T')[0])
+    
+    // Загружаем данные повторения
+    setEditIsRecurring(task.is_recurring || false)
+    if (task.recurrence_pattern) {
+      // Проверяем кастомный паттерн
+      if (['daily', 'weekdays', 'weekends'].includes(task.recurrence_pattern)) {
+        setEditRecurrencePattern(task.recurrence_pattern)
+        setEditSelectedDays([])
+      } else {
+        // Кастомный паттерн - парсим дни
+        setEditRecurrencePattern('custom')
+        setEditSelectedDays(task.recurrence_pattern.split(','))
+      }
+    } else {
+      setEditRecurrencePattern('daily')
+      setEditSelectedDays([])
+    }
   }
 
   const cancelEditTask = () => {
@@ -249,6 +269,9 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     setEditDescription('')
     setEditPoints(10)
     setEditDate('')
+    setEditIsRecurring(false)
+    setEditRecurrencePattern('daily')
+    setEditSelectedDays([])
   }
 
   const saveTask = async () => {
@@ -258,6 +281,20 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       title: editTitle.trim(),
       description: editDescription.trim() || null,
       points: editPoints,
+      is_recurring: editIsRecurring,
+    }
+
+    // Обновляем паттерн повторения
+    if (editIsRecurring) {
+      if (editRecurrencePattern === 'custom' && editSelectedDays.length > 0) {
+        updates.recurrence_pattern = editSelectedDays.join(',')
+      } else if (editRecurrencePattern !== 'custom') {
+        updates.recurrence_pattern = editRecurrencePattern
+      } else {
+        updates.recurrence_pattern = null
+      }
+    } else {
+      updates.recurrence_pattern = null
     }
 
     // Если дата изменилась
@@ -1144,10 +1181,115 @@ ${url}
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                  disabled={editIsRecurring}
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Измените дату, чтобы перенести задачу на другой день
+                  {editIsRecurring ? 'Для регулярных задач дата устанавливается автоматически' : 'Измените дату, чтобы перенести задачу на другой день'}
                 </p>
+              </div>
+
+              {/* Регулярная задача */}
+              <div className="border-t-2 border-gray-200 pt-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editIsRecurring}
+                    onChange={(e) => setEditIsRecurring(e.target.checked)}
+                    className="w-5 h-5 text-purple-600 rounded"
+                  />
+                  <span className="font-medium text-gray-700">🔄 Повторяющаяся задача</span>
+                </label>
+
+                {editIsRecurring && (
+                  <div className="mt-4 space-y-3">
+                    {/* Паттерны повторения */}
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="editRecurrence"
+                          value="daily"
+                          checked={editRecurrencePattern === 'daily'}
+                          onChange={(e) => setEditRecurrencePattern(e.target.value)}
+                          className="w-4 h-4 text-purple-600"
+                        />
+                        <span className="text-gray-700">📅 Ежедневно</span>
+                      </label>
+                      
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="editRecurrence"
+                          value="weekdays"
+                          checked={editRecurrencePattern === 'weekdays'}
+                          onChange={(e) => setEditRecurrencePattern(e.target.value)}
+                          className="w-4 h-4 text-purple-600"
+                        />
+                        <span className="text-gray-700">💼 По будням (Пн-Пт)</span>
+                      </label>
+                      
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="editRecurrence"
+                          value="weekends"
+                          checked={editRecurrencePattern === 'weekends'}
+                          onChange={(e) => setEditRecurrencePattern(e.target.value)}
+                          className="w-4 h-4 text-purple-600"
+                        />
+                        <span className="text-gray-700">🎉 Выходные (Сб-Вс)</span>
+                      </label>
+                      
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="editRecurrence"
+                          value="custom"
+                          checked={editRecurrencePattern === 'custom'}
+                          onChange={(e) => setEditRecurrencePattern(e.target.value)}
+                          className="w-4 h-4 text-purple-600"
+                        />
+                        <span className="text-gray-700">🎯 Выбранные дни</span>
+                      </label>
+                    </div>
+
+                    {/* Выбор дней для кастомного паттерна */}
+                    {editRecurrencePattern === 'custom' && (
+                      <div className="pl-6">
+                        <div className="flex flex-wrap gap-2">
+                          {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day, idx) => {
+                            const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+                            const isSelected = editSelectedDays.includes(day)
+                            return (
+                              <button
+                                key={day}
+                                type="button"
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setEditSelectedDays(editSelectedDays.filter(d => d !== day))
+                                  } else {
+                                    setEditSelectedDays([...editSelectedDays, day])
+                                  }
+                                }}
+                                className={`px-3 py-2 rounded-lg font-medium transition-all ${
+                                  isSelected
+                                    ? 'bg-purple-500 text-white shadow-md'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                              >
+                                {dayNames[idx]}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                      ℹ️ При сохранении эта задача станет шаблоном для автоматического создания экземпляров
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Кнопки */}
