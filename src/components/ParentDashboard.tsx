@@ -1101,15 +1101,15 @@ ${url}
       {/* Модальное окно редактирования задачи */}
       {editingTask && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto"
           onClick={cancelEditTask}
         >
           <div 
-            className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden"
+            className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Заголовок */}
-            <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 text-white relative">
+            <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 text-white relative flex-shrink-0">
               <button
                 onClick={cancelEditTask}
                 className="absolute top-4 right-4 text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-all"
@@ -1127,8 +1127,8 @@ ${url}
               </div>
             </div>
 
-            {/* Форма */}
-            <div className="p-6 space-y-4">
+            {/* Форма с прокруткой */}
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
               {/* Название */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1291,9 +1291,11 @@ ${url}
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Кнопки */}
-              <div className="flex gap-3 pt-2">
+            {/* Кнопки (sticky внизу) */}
+            <div className="p-6 pt-4 border-t border-gray-200 bg-white flex-shrink-0">
+              <div className="flex gap-3">
                 <button
                   onClick={cancelEditTask}
                   className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
