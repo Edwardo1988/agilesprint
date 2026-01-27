@@ -214,6 +214,11 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
     const shouldCreate = shouldCreateTaskForTomorrow(parentTask.recurrence_pattern)
     
     if (shouldCreate) {
+      // Создать дату на завтра
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(0, 0, 0, 0)
+      
       // Создать новый экземпляр
       const newInstance = {
         child_id: completedTask.child_id,
@@ -224,6 +229,8 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
         is_recurring: false,
         parent_task_id: parentTask.id,
         sprint_id: completedTask.sprint_id,
+        created_at: tomorrow.toISOString(), // Устанавливаем на завтра
+        original_date: tomorrow.toISOString(), // Изначально планируется на завтра
       }
 
       const { error } = await supabase

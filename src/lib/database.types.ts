@@ -76,6 +76,7 @@ export interface Database {
           recurrence_pattern: string | null
           parent_task_id: string | null
           sprint_id: string | null
+          original_date: string | null
           created_at: string
         }
         Insert: {
@@ -89,6 +90,7 @@ export interface Database {
           recurrence_pattern?: string | null
           parent_task_id?: string | null
           sprint_id?: string | null
+          original_date?: string | null
           created_at?: string
         }
         Update: {
@@ -102,6 +104,7 @@ export interface Database {
           recurrence_pattern?: string | null
           parent_task_id?: string | null
           sprint_id?: string | null
+          original_date?: string | null
           created_at?: string
         }
         Relationships: [
@@ -165,49 +168,6 @@ export interface Database {
         Relationships: [
           {
             foreignKeyName: "sprints_child_id_fkey"
-            columns: ["child_id"]
-            referencedRelation: "children"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      sprint_achievements: {
-        Row: {
-          id: string
-          sprint_id: string
-          child_id: string
-          achievement_type: string
-          achieved_at: string
-          value: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          sprint_id: string
-          child_id: string
-          achievement_type: string
-          achieved_at?: string
-          value: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          sprint_id?: string
-          child_id?: string
-          achievement_type?: string
-          achieved_at?: string
-          value?: number
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sprint_achievements_sprint_id_fkey"
-            columns: ["sprint_id"]
-            referencedRelation: "sprints"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sprint_achievements_child_id_fkey"
             columns: ["child_id"]
             referencedRelation: "children"
             referencedColumns: ["id"]

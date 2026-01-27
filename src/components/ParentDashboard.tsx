@@ -170,6 +170,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       is_recurring: isRecurring,
       recurrence_pattern: finalRecurrencePattern,
       sprint_id: activeSprint?.id || null,
+      original_date: new Date().toISOString(), // Устанавливаем изначальную дату
     }
 
     const { data, error } = await supabase
@@ -213,6 +214,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       is_recurring: false,
       parent_task_id: parentTask.id,
       sprint_id: parentTask.sprint_id,
+      original_date: new Date().toISOString(), // Устанавливаем изначальную дату
     }
 
     const { error } = await supabase
@@ -758,13 +760,33 @@ ${url}
                             </p>
                           )}
                           {/* Дата задачи */}
-                          <p className="text-xs text-gray-500 mt-1">
-                            📅 {new Date(task.created_at).toLocaleDateString('ru-RU', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: new Date(task.created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                            })}
-                          </p>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {task.original_date && task.original_date !== task.created_at ? (
+                              <div className="flex flex-col gap-1">
+                                <p className="flex items-center gap-1">
+                                  📅 Сегодня
+                                  <span className="inline-block px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                                    Перенесена
+                                  </span>
+                                </p>
+                                <p className="text-gray-400">
+                                  Была запланирована: {new Date(task.original_date).toLocaleDateString('ru-RU', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: new Date(task.original_date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                  })}
+                                </p>
+                              </div>
+                            ) : (
+                              <p>
+                                📅 {new Date(task.created_at).toLocaleDateString('ru-RU', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: new Date(task.created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                })}
+                              </p>
+                            )}
+                          </div>
                         </div>
                         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
                           <div className={`px-3 py-1 sm:px-4 sm:py-2 rounded-full font-bold text-sm sm:text-base ${
