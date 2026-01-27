@@ -307,8 +307,18 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       newDate.setHours(0, 0, 0, 0)
       updates.created_at = newDate.toISOString()
       
-      // Если original_date еще не установлена, сохраняем старую дату
-      if (!editingTask.original_date) {
+      // Проверяем изначальную дату
+      if (editingTask.original_date) {
+        const originalDate = new Date(editingTask.original_date)
+        originalDate.setHours(0, 0, 0, 0)
+        
+        // Если меняем дату обратно на original_date - сбрасываем перенос
+        if (originalDate.getTime() === newDate.getTime()) {
+          updates.original_date = null
+        }
+        // Если меняем на другую дату - original_date остаётся как есть
+      } else {
+        // Если original_date не была установлена, сохраняем текущую дату как original
         updates.original_date = editingTask.created_at
       }
     }
@@ -1194,9 +1204,48 @@ ${url}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
                   disabled={editIsRecurring}
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  {editIsRecurring ? 'Для регулярных задач дата устанавливается автоматически' : 'Измените дату, чтобы перенести задачу на другой день'}
-                </p>
+                {/* Подсказка и кнопка сброса */}
+                {editingTask && editingTask.original_date && !editIsRecurring && (() => {
+                  const originalDate = new Date(editingTask.original_date)
+                  originalDate.setHours(0, 0, 0, 0)
+                  const currentEditDate = new Date(editDate)
+                  currentEditDate.setHours(0, 0, 0, 0)
+                  
+                  // Показываем только если текущая дата != original_date
+                  if (originalDate.getTime() !== currentEditDate.getTime()) {
+                    return (
+                      <div className="mt-2 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                        <p className="text-xs text-orange-700 mb-2">
+                          💡 Эта задача была перенесена. Изначально планировалась на: {originalDate.toLocaleDateString('ru-RU', {
+                            day: 'numeric',
+                            month: 'short'
+                          })}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const origDate = new Date(editingTask.original_date!)
+                            setEditDate(origDate.toISOString().split('T')[0])
+                          }}
+                          className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1.5 rounded-lg font-medium transition-all"
+                        >
+                          ↩️ Вернуть на изначальную дату
+                        </button>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
+                {!editingTask?.original_date && !editIsRecurring && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Измените дату, чтобы перенести задачу на другой день
+                  </p>
+                )}
+                {editIsRecurring && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Для регулярных задач дата устанавливается автоматически
+                  </p>
+                )}
               </div>
 
               {/* Регулярная задача */}
