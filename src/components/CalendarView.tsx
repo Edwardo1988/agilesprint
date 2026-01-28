@@ -37,8 +37,13 @@ export default function CalendarView({ tasks, sprints, onTaskUpdate, onTaskClick
     const dateStr = date.toISOString().split('T')[0]
     return tasks.filter(task => {
       if (task.is_recurring) return false // Скрываем шаблоны
-      const taskDate = new Date(task.created_at).toISOString().split('T')[0]
-      return taskDate === dateStr
+      // Используем локальную дату без конвертации в UTC
+      const taskDate = new Date(task.created_at)
+      const year = taskDate.getFullYear()
+      const month = String(taskDate.getMonth() + 1).padStart(2, '0')
+      const day = String(taskDate.getDate()).padStart(2, '0')
+      const taskDateStr = `${year}-${month}-${day}`
+      return taskDateStr === dateStr
     }).sort((a, b) => {
       const timeA = a.start_time || '09:00:00'
       const timeB = b.start_time || '09:00:00'
@@ -68,11 +73,14 @@ export default function CalendarView({ tasks, sprints, onTaskUpdate, onTaskClick
     e.preventDefault()
     if (!draggedTask) return
 
-    const newDate = new Date(targetDate)
-    newDate.setHours(0, 0, 0, 0)
+    // Форматируем дату в YYYY-MM-DD HH:MM:SS без сдвига часового пояса
+    const year = targetDate.getFullYear()
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0')
+    const day = String(targetDate.getDate()).padStart(2, '0')
+    const dateStr = `${year}-${month}-${day} 00:00:00`
 
     const updates: Partial<Task> = {
-      created_at: newDate.toISOString(),
+      created_at: dateStr,
     }
 
     // Если дропнули на конкретное время
@@ -84,7 +92,9 @@ export default function CalendarView({ tasks, sprints, onTaskUpdate, onTaskClick
     if (draggedTask.original_date) {
       const originalDate = new Date(draggedTask.original_date)
       originalDate.setHours(0, 0, 0, 0)
-      if (originalDate.getTime() === newDate.getTime()) {
+      const targetDateNormalized = new Date(targetDate)
+      targetDateNormalized.setHours(0, 0, 0, 0)
+      if (originalDate.getTime() === targetDateNormalized.getTime()) {
         updates.original_date = null // Сбрасываем если вернули на original
       }
     } else {
