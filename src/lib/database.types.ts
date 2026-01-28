@@ -77,6 +77,7 @@ export interface Database {
           parent_task_id: string | null
           sprint_id: string | null
           original_date: string | null
+          start_time: string | null
           created_at: string
         }
         Insert: {
@@ -91,6 +92,7 @@ export interface Database {
           parent_task_id?: string | null
           sprint_id?: string | null
           original_date?: string | null
+          start_time?: string | null
           created_at?: string
         }
         Update: {
@@ -105,6 +107,7 @@ export interface Database {
           parent_task_id?: string | null
           sprint_id?: string | null
           original_date?: string | null
+          start_time?: string | null
           created_at?: string
         }
         Relationships: [

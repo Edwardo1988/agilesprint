@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import SprintManager from './SprintManager'
+import CalendarView from './CalendarView'
 
 type Child = Database['public']['Tables']['children']['Row']
 type Task = Database['public']['Tables']['tasks']['Row']
@@ -39,6 +40,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrencePattern, setRecurrencePattern] = useState('daily')
   const [selectedDays, setSelectedDays] = useState<string[]>([])
+  const [newTaskTime, setNewTaskTime] = useState('09:00')
   
   // Модальное окно кода доступа
   const [showAccessCodeModal, setShowAccessCodeModal] = useState(false)
@@ -52,12 +54,16 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
   // Фильтр даты для задач
   const [selectedDate, setSelectedDate] = useState<string>('all')
   
+  // Вид отображения (список или календарь)
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  
   // Редактирование задачи
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editPoints, setEditPoints] = useState(10)
   const [editDate, setEditDate] = useState('')
+  const [editTime, setEditTime] = useState('09:00')
   const [editIsRecurring, setEditIsRecurring] = useState(false)
   const [editRecurrencePattern, setEditRecurrencePattern] = useState('daily')
   const [editSelectedDays, setEditSelectedDays] = useState<string[]>([])
@@ -181,6 +187,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       is_recurring: isRecurring,
       recurrence_pattern: finalRecurrencePattern,
       sprint_id: activeSprint?.id || null,
+      start_time: isRecurring ? null : `${newTaskTime}:00`,
       // original_date не устанавливаем - будет null для новых задач
     }
 
@@ -206,6 +213,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       setIsRecurring(false)
       setRecurrencePattern('daily')
       setSelectedDays([])
+      setNewTaskTime('09:00')
       
       // Перезагрузить данные чтобы увидеть экземпляры
       loadDashboardData()
@@ -245,6 +253,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     // Форматируем дату для input type="date"
     const taskDate = new Date(task.created_at)
     setEditDate(taskDate.toISOString().split('T')[0])
+    setEditTime(task.start_time?.substring(0, 5) || '09:00')
     
     // Загружаем данные повторения
     setEditIsRecurring(task.is_recurring || false)
@@ -270,6 +279,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     setEditDescription('')
     setEditPoints(10)
     setEditDate('')
+    setEditTime('09:00')
     setEditIsRecurring(false)
     setEditRecurrencePattern('daily')
     setEditSelectedDays([])
@@ -285,6 +295,7 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
       description: editDescription.trim() || null,
       points: editPoints,
       is_recurring: editIsRecurring,
+      start_time: editIsRecurring ? null : `${editTime}:00`,
     }
 
     // Обновляем паттерн повторения
@@ -600,6 +611,30 @@ ${url}
               Задачи для {selectedChildData.name}
             </h2>
 
+            {/* Переключатель вида */}
+            <div className="flex justify-center gap-2 mb-6">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                📋 Список
+              </button>
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`px-6 py-2.5 rounded-xl font-semibold transition-all ${
+                  viewMode === 'calendar'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                📅 Календарь
+              </button>
+            </div>
+
             {/* Форма добавления задачи */}
             <div className="bg-gray-50 rounded-xl p-4 sm:p-6 mb-6">
               <h3 className="font-semibold text-gray-700 mb-4">Добавить задачу</h3>
@@ -641,6 +676,24 @@ ${url}
                     </button>
                   </div>
                 </div>
+
+                {/* Время начала */}
+              {!isRecurring && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ⏰ Время начала
+                  </label>
+                  <input
+                    type="time"
+                    value={newTaskTime}
+                    onChange={(e) => setNewTaskTime(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Время отображается в календарном виде
+                  </p>
+                </div>
+              )}
 
                 {/* Настройки регулярных задач */}
                 <div className="border-t-2 border-gray-200 pt-4">
@@ -756,218 +809,408 @@ ${url}
               </div>
             </div>
 
-            {/* Календарный фильтр */}
-            <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border-2 border-purple-200">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg">📅</span>
-                <h3 className="font-semibold text-gray-700">Фильтр по дате</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedDate('all')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    selectedDate === 'all'
-                      ? 'bg-purple-500 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  Все задачи
-                </button>
-                <button
-                  onClick={() => setSelectedDate('today')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    selectedDate === 'today'
-                      ? 'bg-purple-500 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  Сегодня
-                </button>
-                <button
-                  onClick={() => setSelectedDate('tomorrow')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    selectedDate === 'tomorrow'
-                      ? 'bg-purple-500 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  Завтра
-                </button>
-                <button
-                  onClick={() => setSelectedDate('future')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                    selectedDate === 'future'
-                      ? 'bg-purple-500 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  Будущие
-                </button>
-              </div>
-            </div>
+            {viewMode === 'list' ? (
+              <div>
+                {/* Календарный фильтр */}
+                <div className="flex justify-center gap-2 mb-6 flex-wrap">
+                  <button
+                    onClick={() => setSelectedDate('all')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      selectedDate === 'all'
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Все задачи
+                  </button>
+                  <button
+                    onClick={() => setSelectedDate('today')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      selectedDate === 'today'
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Сегодня
+                  </button>
+                  <button
+                    onClick={() => setSelectedDate('tomorrow')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      selectedDate === 'tomorrow'
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Завтра
+                  </button>
+                  <button
+                    onClick={() => setSelectedDate('future')}
+                    className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                      selectedDate === 'future'
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Будущие
+                  </button>
+                </div>
 
-            {/* Список задач */}
-            {(() => {
-              // Фильтруем задачи по выбранной дате
-              const today = new Date()
-              today.setHours(0, 0, 0, 0)
-              const tomorrow = new Date(today)
-              tomorrow.setDate(tomorrow.getDate() + 1)
-              const dayAfterTomorrow = new Date(tomorrow)
-              dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1)
-              
-              let filteredTasks = childTasks
-              
-              if (selectedDate === 'today') {
-                filteredTasks = childTasks.filter(task => {
-                  const taskDate = new Date(task.created_at)
-                  taskDate.setHours(0, 0, 0, 0)
-                  return taskDate.getTime() === today.getTime()
-                })
-              } else if (selectedDate === 'tomorrow') {
-                filteredTasks = childTasks.filter(task => {
-                  const taskDate = new Date(task.created_at)
-                  taskDate.setHours(0, 0, 0, 0)
-                  return taskDate.getTime() === tomorrow.getTime()
-                })
-              } else if (selectedDate === 'future') {
-                filteredTasks = childTasks.filter(task => {
-                  const taskDate = new Date(task.created_at)
-                  taskDate.setHours(0, 0, 0, 0)
-                  return taskDate.getTime() >= dayAfterTomorrow.getTime()
-                })
-              }
-              
-              return filteredTasks.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <p className="text-lg">
-                  {selectedDate === 'all' ? 'Пока нет задач' : 'Нет задач на выбранную дату'}
-                </p>
-                <p className="text-sm mt-2">
-                  {selectedDate === 'all' ? 'Добавьте первую задачу выше' : 'Выберите другую дату или добавьте новую задачу'}
-                </p>
+                {/* Кнопка добавления задачи */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Добавить новую задачу</h3>
+                  <div className="space-y-4">
+                    {/* Название */}
+                    <input
+                      type="text"
+                      placeholder="Название задачи"
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && addTask()}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                    />
+                    
+                    {/* Описание */}
+                    <textarea
+                      placeholder="Описание (необязательно)"
+                      value={newTaskDescription}
+                      onChange={(e) => setNewTaskDescription(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 resize-none"
+                      rows={2}
+                    />
+                    
+                    {/* Баллы */}
+                    <div className="flex items-center gap-4">
+                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                        Награда:
+                      </label>
+                      <input
+                        type="number"
+                        value={newTaskPoints}
+                        onChange={(e) => setNewTaskPoints(parseInt(e.target.value) || 0)}
+                        min="1"
+                        className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                        placeholder="10"
+                      />
+                      <span className="text-2xl">⭐</span>
+                    </div>
+
+                    {/* Время начала */}
+                    {!isRecurring && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ⏰ Время начала
+                        </label>
+                        <input
+                          type="time"
+                          value={newTaskTime}
+                          onChange={(e) => setNewTaskTime(e.target.value)}
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Время отображается в календарном виде
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Регулярная задача */}
+                    <div className="border-t-2 border-gray-200 pt-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isRecurring}
+                          onChange={(e) => setIsRecurring(e.target.checked)}
+                          className="w-5 h-5 text-purple-600 rounded"
+                        />
+                        <span className="font-medium text-gray-700">🔄 Повторяющаяся задача</span>
+                      </label>
+
+                      {isRecurring && (
+                        <div className="mt-4 space-y-3 pl-7">
+                          {/* Паттерны повторения */}
+                          <div className="space-y-2">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="recurrence"
+                                value="daily"
+                                checked={recurrencePattern === 'daily'}
+                                onChange={(e) => setRecurrencePattern(e.target.value)}
+                                className="w-4 h-4 text-purple-600"
+                              />
+                              <span className="text-gray-700">📅 Ежедневно</span>
+                            </label>
+                            
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="recurrence"
+                                value="weekdays"
+                                checked={recurrencePattern === 'weekdays'}
+                                onChange={(e) => setRecurrencePattern(e.target.value)}
+                                className="w-4 h-4 text-purple-600"
+                              />
+                              <span className="text-gray-700">💼 По будням (Пн-Пт)</span>
+                            </label>
+                            
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="recurrence"
+                                value="weekends"
+                                checked={recurrencePattern === 'weekends'}
+                                onChange={(e) => setRecurrencePattern(e.target.value)}
+                                className="w-4 h-4 text-purple-600"
+                              />
+                              <span className="text-gray-700">🎉 Выходные (Сб-Вс)</span>
+                            </label>
+                            
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="recurrence"
+                                value="custom"
+                                checked={recurrencePattern === 'custom'}
+                                onChange={(e) => setRecurrencePattern(e.target.value)}
+                                className="w-4 h-4 text-purple-600"
+                              />
+                              <span className="text-gray-700">🎯 Выбранные дни</span>
+                            </label>
+                          </div>
+
+                          {/* Выбор дней для кастомного паттерна */}
+                          {recurrencePattern === 'custom' && (
+                            <div className="pl-6">
+                              <div className="flex flex-wrap gap-2">
+                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day, idx) => {
+                                  const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+                                  const isSelected = selectedDays.includes(day)
+                                  return (
+                                    <button
+                                      key={day}
+                                      type="button"
+                                      onClick={() => {
+                                        if (isSelected) {
+                                          setSelectedDays(selectedDays.filter(d => d !== day))
+                                        } else {
+                                          setSelectedDays([...selectedDays, day])
+                                        }
+                                      }}
+                                      className={`px-3 py-2 rounded-lg font-medium transition-all ${
+                                        isSelected
+                                          ? 'bg-purple-500 text-white shadow-md'
+                                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                      }`}
+                                    >
+                                      {dayNames[idx]}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                            ℹ️ Регулярная задача создаст автоматические экземпляры по выбранному расписанию
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Кнопка добавить */}
+                    <button
+                      onClick={addTask}
+                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg"
+                    >
+                      ➕ Добавить задачу
+                    </button>
+                  </div>
+                </div>
+
+                {/* Список задач */}
+                <div>
+                  {(() => {
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    
+                    const tomorrow = new Date(today)
+                    tomorrow.setDate(tomorrow.getDate() + 1)
+
+                    const filteredTasks = childTasks.filter(task => {
+                      if (selectedDate === 'all') return true
+                      
+                      const taskDate = new Date(task.created_at)
+                      taskDate.setHours(0, 0, 0, 0)
+                      
+                      if (selectedDate === 'today') {
+                        return taskDate.getTime() === today.getTime()
+                      } else if (selectedDate === 'tomorrow') {
+                        return taskDate.getTime() === tomorrow.getTime()
+                      } else if (selectedDate === 'future') {
+                        return taskDate.getTime() > tomorrow.getTime()
+                      }
+                      
+                      return true
+                    })
+
+                    if (filteredTasks.length === 0) {
+                      return (
+                        <div className="text-center py-12">
+                          <div className="text-6xl mb-4">📝</div>
+                          <p className="text-gray-500 text-lg">
+                            {selectedDate === 'all' 
+                              ? 'Пока нет задач. Добавьте первую!' 
+                              : selectedDate === 'today'
+                              ? 'На сегодня задач нет'
+                              : selectedDate === 'tomorrow'
+                              ? 'На завтра задач нет'
+                              : 'Будущих задач нет'}
+                          </p>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {filteredTasks.map(task => {
+                          const taskSprint = sprints.find(s => s.id === task.sprint_id)
+                          return (
+                            <div
+                              key={task.id}
+                              className={`p-4 sm:p-5 rounded-xl border-2 ${
+                                task.is_completed
+                                  ? 'bg-green-50 border-green-200'
+                                  : 'bg-white border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3 sm:gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                                    <h3 className={`font-semibold text-base sm:text-lg break-words ${
+                                      task.is_completed ? 'line-through text-gray-500' : 'text-gray-800'
+                                    }`}>
+                                      {task.title}
+                                    </h3>
+                                    {taskSprint && (
+                                      <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium self-start">
+                                        🎯 {taskSprint.name}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {task.description && (
+                                    <p className={`text-sm sm:text-base break-words ${
+                                      task.is_completed ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
+                                      {task.description}
+                                    </p>
+                                  )}
+                                  {/* Дата задачи */}
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {(() => {
+                                      // Проверяем перенесена ли задача
+                                      if (!task.original_date) return false
+                                      
+                                      const originalDate = new Date(task.original_date)
+                                      originalDate.setHours(0, 0, 0, 0)
+                                      
+                                      const createdDate = new Date(task.created_at)
+                                      createdDate.setHours(0, 0, 0, 0)
+                                      
+                                      return originalDate.getTime() !== createdDate.getTime()
+                                    })() ? (
+                                      <div className="flex flex-col gap-1">
+                                        <p className="flex items-center gap-1">
+                                          📅 {new Date(task.created_at).toLocaleDateString('ru-RU', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: new Date(task.created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                          })}
+                                          <span className="inline-block px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                                            Перенесена
+                                          </span>
+                                        </p>
+                                        <p className="text-gray-400">
+                                          Была запланирована: {new Date(task.original_date).toLocaleDateString('ru-RU', {
+                                            day: 'numeric',
+                                            month: 'short',
+                                            year: new Date(task.original_date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                          })}
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <p>
+                                        📅 {new Date(task.created_at).toLocaleDateString('ru-RU', {
+                                          day: 'numeric',
+                                          month: 'short',
+                                          year: new Date(task.created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+                                        })}
+                                        {task.start_time && (
+                                          <span className="ml-2">
+                                            ⏰ {task.start_time.substring(0, 5)}
+                                          </span>
+                                        )}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
+                                  <div className={`px-3 py-1 sm:px-4 sm:py-2 rounded-full font-bold text-sm sm:text-base ${
+                                    task.is_completed
+                                      ? 'bg-green-200 text-green-700'
+                                      : 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white'
+                                  }`}>
+                                    {task.points} ⭐
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      startEditTask(task);
+                                    }}
+                                    className="text-blue-500 hover:text-blue-700 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Редактировать задачу"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteTask(task.id);
+                                    }}
+                                    className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Удалить задачу"
+                                  >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
+                </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {filteredTasks.map(task => {
-                  const taskSprint = sprints.find(s => s.id === task.sprint_id)
-                  return (
-                    <div
-                      key={task.id}
-                      className={`p-4 sm:p-5 rounded-xl border-2 ${
-                        task.is_completed
-                          ? 'bg-green-50 border-green-200'
-                          : 'bg-white border-gray-200'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3 sm:gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
-                            <h3 className={`font-semibold text-base sm:text-lg break-words ${
-                              task.is_completed ? 'line-through text-gray-500' : 'text-gray-800'
-                            }`}>
-                              {task.title}
-                            </h3>
-                            {taskSprint && (
-                              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium self-start">
-                                🎯 {taskSprint.name}
-                              </span>
-                            )}
-                          </div>
-                          {task.description && (
-                            <p className={`text-sm sm:text-base break-words ${
-                              task.is_completed ? 'text-gray-400' : 'text-gray-600'
-                            }`}>
-                              {task.description}
-                            </p>
-                          )}
-                          {/* Дата задачи */}
-                          <div className="text-xs text-gray-500 mt-1">
-                            {(() => {
-                              // Проверяем перенесена ли задача
-                              if (!task.original_date) return false
-                              
-                              const originalDate = new Date(task.original_date)
-                              originalDate.setHours(0, 0, 0, 0)
-                              
-                              const createdDate = new Date(task.created_at)
-                              createdDate.setHours(0, 0, 0, 0)
-                              
-                              return originalDate.getTime() !== createdDate.getTime()
-                            })() ? (
-                              <div className="flex flex-col gap-1">
-                                <p className="flex items-center gap-1">
-                                  📅 {new Date(task.created_at).toLocaleDateString('ru-RU', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: new Date(task.created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                                  })}
-                                  <span className="inline-block px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs font-medium">
-                                    Перенесена
-                                  </span>
-                                </p>
-                                <p className="text-gray-400">
-                                  Была запланирована: {new Date(task.original_date).toLocaleDateString('ru-RU', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: new Date(task.original_date).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                                  })}
-                                </p>
-                              </div>
-                            ) : (
-                              <p>
-                                📅 {new Date(task.created_at).toLocaleDateString('ru-RU', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: new Date(task.created_at).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                                })}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 flex-shrink-0">
-                          <div className={`px-3 py-1 sm:px-4 sm:py-2 rounded-full font-bold text-sm sm:text-base ${
-                            task.is_completed
-                              ? 'bg-green-200 text-green-700'
-                              : 'bg-gradient-to-r from-yellow-400 to-orange-400 text-white'
-                          }`}>
-                            {task.points} ⭐
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startEditTask(task);
-                            }}
-                            className="text-blue-500 hover:text-blue-700 p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Редактировать задачу"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteTask(task.id);
-                            }}
-                            className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Удалить задачу"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-            })()}
-          </div>
-        )}
-      </div>
+              <CalendarView
+                tasks={childTasks}
+                sprints={sprints}
+                onTaskUpdate={async (taskId, updates) => {
+                  const { error } = await supabase
+                    .from('tasks')
+                    .update(updates)
+                    .eq('id', taskId)
+                  
+                  if (!error) {
+                    await loadDashboardData()
+                  }
+                }}
+                onTaskClick={(task) => startEditTask(task)}
+              />
+            )}
 
       {/* Модальное окно добавления ребёнка */}
       {showAddChild && (
@@ -1247,6 +1490,24 @@ ${url}
                   </p>
                 )}
               </div>
+
+              {/* Время начала */}
+              {!editIsRecurring && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ⏰ Время начала
+                  </label>
+                  <input
+                    type="time"
+                    value={editTime}
+                    onChange={(e) => setEditTime(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Время отображается в календарном виде
+                  </p>
+                </div>
+              )}
 
               {/* Регулярная задача */}
               <div className="border-t-2 border-gray-200 pt-4">
