@@ -1220,6 +1220,9 @@ ${url}
                 onTaskClick={(task) => startEditTask(task)}
               />
             )}
+          </div>
+        )}
+      </div>
 
       {/* Модальное окно добавления ребёнка */}
       {showAddChild && (
