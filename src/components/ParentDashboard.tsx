@@ -250,12 +250,9 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     setEditTitle(task.title)
     setEditDescription(task.description || '')
     setEditPoints(task.points)
-    // Форматируем дату для input type="date" без UTC сдвига
+    // Форматируем дату для input type="date"
     const taskDate = new Date(task.created_at)
-    const year = taskDate.getFullYear()
-    const month = String(taskDate.getMonth() + 1).padStart(2, '0')
-    const day = String(taskDate.getDate()).padStart(2, '0')
-    setEditDate(`${year}-${month}-${day}`)
+    setEditDate(taskDate.toISOString().split('T')[0])
     setEditTime(task.start_time?.substring(0, 5) || '09:00')
     
     // Загружаем данные повторения
@@ -315,25 +312,19 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     }
 
     // Если дата изменилась
-    const taskDate = new Date(editingTask.created_at)
-    const currentDate = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`
-    
+    const currentDate = new Date(editingTask.created_at).toISOString().split('T')[0]
     if (editDate !== currentDate) {
-      // Создаём дату без UTC сдвига
-      const [year, month, day] = editDate.split('-')
-      const dateStr = `${year}-${month}-${day} 00:00:00`
-      updates.created_at = dateStr
+      const newDate = new Date(editDate)
+      newDate.setHours(0, 0, 0, 0)
+      updates.created_at = newDate.toISOString()
       
       // Проверяем изначальную дату
       if (editingTask.original_date) {
         const originalDate = new Date(editingTask.original_date)
         originalDate.setHours(0, 0, 0, 0)
         
-        const newDateCheck = new Date(editDate)
-        newDateCheck.setHours(0, 0, 0, 0)
-        
         // Если меняем дату обратно на original_date - сбрасываем перенос
-        if (originalDate.getTime() === newDateCheck.getTime()) {
+        if (originalDate.getTime() === newDate.getTime()) {
           updates.original_date = null
         }
         // Если меняем на другую дату - original_date остаётся как есть
@@ -1480,10 +1471,7 @@ ${url}
                           type="button"
                           onClick={() => {
                             const origDate = new Date(editingTask.original_date!)
-                            const year = origDate.getFullYear()
-                            const month = String(origDate.getMonth() + 1).padStart(2, '0')
-                            const day = String(origDate.getDate()).padStart(2, '0')
-                            setEditDate(`${year}-${month}-${day}`)
+                            setEditDate(origDate.toISOString().split('T')[0])
                           }}
                           className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1.5 rounded-lg font-medium transition-all"
                         >
@@ -1651,7 +1639,6 @@ ${url}
           </div>
         </div>
       )}
-      </div>
     </div>
   )
 }
