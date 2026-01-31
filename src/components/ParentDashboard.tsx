@@ -1216,6 +1216,9 @@ ${url}
         )}
       </div>
 
+      {/* Telegram уведомления */}
+      {parentId && <TelegramConnect parentId={parentId} />}
+
       {/* Модальное окно добавления ребёнка */}
       {showAddChild && (
         <div 
@@ -1291,42 +1294,28 @@ ${url}
 
             {/* Контент */}
             <div className="p-6">
-              {/* Верхняя секция: Код доступа + Telegram */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-  {/* Код доступа */}
-  <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
-    <h2 className="text-2xl font-bold text-gray-800 mb-4">
-      🔑 Код доступа
-    </h2>
-    <div className="space-y-4">
-      <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-        <p className="text-sm text-blue-700 mb-2">
-          Поделитесь этим кодом с вашими детьми для доступа к их панели
-        </p>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 bg-white px-4 py-3 rounded-lg font-mono text-xl font-bold text-blue-900 border-2 border-blue-300 text-center">
-            {accessCode}
-          </code>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(accessCode)
-              alert('Код скопирован!')
-            }}
-            className="px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all"
-          >
-            📋
-          </button>
-        </div>
-      </div>
-      <p className="text-xs text-gray-500">
-        Ребёнок может использовать этот код на странице входа
-      </p>
-    </div>
-  </div>
-
-  {/* Telegram уведомления */}
-  {parentId && <TelegramConnect parentId={parentId} />}
-</div>
+              {/* Код доступа */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Код доступа:
+                </label>
+                <div className="flex gap-2">
+                  <div className="flex-1 px-4 py-3 bg-gray-100 rounded-xl font-mono text-2xl font-bold text-center text-purple-600 border-2 border-gray-200">
+                    {selectedChildForCode.access_code}
+                  </div>
+                  <button
+                    onClick={copyAccessCode}
+                    className="px-4 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors font-semibold"
+                  >
+                    {copiedCode ? '✓' : '📋'}
+                  </button>
+                </div>
+                {copiedCode && (
+                  <p className="text-sm text-green-600 mt-2 text-center">
+                    ✓ Ссылка скопирована!
+                  </p>
+                )}
+              </div>
 
               {/* Ссылка */}
               <div className="mb-6">
