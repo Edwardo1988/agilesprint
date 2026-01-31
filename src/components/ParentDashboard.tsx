@@ -1216,7 +1216,8 @@ ${url}
         )}
       </div>
 
-      {user && <TelegramConnect parentId={user.id} />}
+      {/* Telegram уведомления */}
+      {parentId && <TelegramConnect parentId={parentId} />}
 
       {/* Модальное окно добавления ребёнка */}
       {showAddChild && (
