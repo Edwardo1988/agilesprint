@@ -102,11 +102,12 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
         }`}
       >
         <span className="text-xl">📱</span>
-        {isConnected ? (
-          <span className="text-sm font-medium text-green-700">✓ Подключен</span>
-        ) : (
+        <div className="flex items-center gap-1.5">
           <span className="text-sm font-medium text-gray-700">Telegram</span>
-        )}
+          {isConnected && (
+            <span className="text-xs font-semibold text-green-700">✓</span>
+          )}
+        </div>
         <svg 
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
           fill="none" 
@@ -181,7 +182,7 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
                   <div>
                     <p className="text-blue-800 font-medium mb-2">Шаг 1: Откройте бота</p>
                     <a
-                      href="https://t.me/agilefamilybot"
+                      href="https://t.me/agilesprint_bot"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block w-full px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-center font-medium transition-all"
