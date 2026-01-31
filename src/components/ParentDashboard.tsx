@@ -461,48 +461,57 @@ ${url}
       <div className="max-w-7xl mx-auto">
         {/* Заголовок */}
         <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-            <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-2">
-                AgileSprint 🎯
-              </h1>
-              <p className="text-base sm:text-lg text-gray-600">
-                Управление задачами для ваших детей
-              </p>
-            </div>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-2">
+            AgileSprint 🎯
+          </h1>
+          <p className="text-base sm:text-lg text-gray-600 mb-6">
+            Управление задачами для ваших детей
+          </p>
+
+          {/* Верхняя секция: Код доступа + Telegram */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Код доступа родителя */}
-            <div className="bg-white rounded-xl shadow-lg p-4 border-2 border-blue-200">
-              <p className="text-xs text-gray-600 mb-1">Ваш код доступа:</p>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xl font-bold text-blue-600">
-                  {accessCode}
-                </span>
-                <button
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(accessCode)
-                      setCopiedParentCode(true)
-                      setTimeout(() => setCopiedParentCode(false), 2000)
-                    } catch (err) {
-                      console.error('Failed to copy:', err)
-                    }
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Скопировать код"
-                >
-                  {copiedParentCode ? '✓' : '📋'}
-                </button>
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <span className="text-2xl">🔑</span>
+                Код доступа
+              </h2>
+              <div className="space-y-4">
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                  <p className="text-sm text-blue-700 mb-3">
+                    Используйте этот код для входа с другого устройства
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-white px-4 py-3 rounded-lg font-mono text-xl font-bold text-blue-900 border-2 border-blue-300 text-center">
+                      {accessCode}
+                    </code>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(accessCode)
+                          setCopiedParentCode(true)
+                          setTimeout(() => setCopiedParentCode(false), 2000)
+                        } catch (err) {
+                          console.error('Failed to copy:', err)
+                        }
+                      }}
+                      className="px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all text-xl"
+                      title="Скопировать код"
+                    >
+                      {copiedParentCode ? '✓' : '📋'}
+                    </button>
+                  </div>
+                  {copiedParentCode && (
+                    <p className="text-xs text-green-600 mt-2 text-center">
+                      ✓ Код скопирован!
+                    </p>
+                  )}
+                </div>
               </div>
-              {copiedParentCode ? (
-                <p className="text-xs text-green-600 mt-1">
-                  ✓ Код скопирован!
-                </p>
-              ) : (
-                <p className="text-xs text-gray-500 mt-1">
-                  Сохраните для входа с другого устройства
-                </p>
-              )}
             </div>
+
+            {/* Telegram уведомления */}
+            {parentId && <TelegramConnect parentId={parentId} />}
           </div>
         </div>
 
