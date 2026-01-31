@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import SprintManager from './SprintManager'
 import CalendarView from './CalendarView'
+import TelegramConnect from './TelegramConnect'
 
 type Child = Database['public']['Tables']['children']['Row']
 type Task = Database['public']['Tables']['tasks']['Row']
@@ -1214,6 +1215,8 @@ ${url}
           </div>
         )}
       </div>
+
+      {user && <TelegramConnect parentId={user.id} />}
 
       {/* Модальное окно добавления ребёнка */}
       {showAddChild && (
