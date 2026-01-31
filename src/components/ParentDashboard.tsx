@@ -459,22 +459,53 @@ ${url}
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Заголовок */}
+        {/* Шапка */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-2">
-            AgileSprint 🎯
-          </h1>
-          <p className="text-base sm:text-lg text-gray-600">
-            Управление задачами для ваших детей
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            {/* Лого */}
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800">
+                AgileSprint 🎯
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600 hidden sm:block">
+                Управление задачами для ваших детей
+              </p>
+            </div>
+
+            {/* Код доступа - компактный */}
+            <div className="hidden lg:flex items-center gap-2 bg-white rounded-xl shadow-md px-4 py-2 border-2 border-blue-200">
+              <span className="text-xs text-gray-600">Код:</span>
+              <code className="font-mono text-lg font-bold text-blue-600">
+                {accessCode}
+              </code>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(accessCode)
+                    setCopiedParentCode(true)
+                    setTimeout(() => setCopiedParentCode(false), 2000)
+                  } catch (err) {
+                    console.error('Failed to copy:', err)
+                  }
+                }}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                title="Скопировать код"
+              >
+                {copiedParentCode ? '✓' : '📋'}
+              </button>
+            </div>
+
+            {/* Telegram - с выпадающим меню */}
+            <div className="relative">
+              {parentId && <TelegramConnect parentId={parentId} />}
+            </div>
+          </div>
         </div>
 
-        {/* Основной layout: контент + боковая панель */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Основной контент */}
-          <div className="flex-1 space-y-6">
-            {/* Дети */}
-            <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+        {/* Основной контент */}
+        <div className="space-y-6">
+          {/* Дети */}
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Дети</h2>
             <button
@@ -1181,48 +1212,8 @@ ${url}
             )}
           </div>
         )}
-          </div>
-          {/* Конец основного контента */}
-
-          {/* Боковая панель (справа на десктопе, внизу на мобильных) */}
-          <div className="lg:w-80 flex-shrink-0 space-y-4">
-            {/* Код доступа */}
-            <div className="bg-white rounded-xl shadow-lg p-4 border-2 border-blue-200">
-              <p className="text-xs text-gray-600 mb-1 font-medium">Ваш код доступа:</p>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xl font-bold text-blue-600">
-                  {accessCode}
-                </span>
-                <button
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(accessCode)
-                      setCopiedParentCode(true)
-                      setTimeout(() => setCopiedParentCode(false), 2000)
-                    } catch (err) {
-                      console.error('Failed to copy:', err)
-                    }
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Скопировать код"
-                >
-                  {copiedParentCode ? '✓' : '📋'}
-                </button>
-              </div>
-              {copiedParentCode && (
-                <p className="text-xs text-green-600 mt-1">✓ Скопирован!</p>
-              )}
-            </div>
-
-            {/* Telegram */}
-            {parentId && (
-              <div className="bg-white rounded-xl shadow-lg p-4 border-2 border-purple-200">
-                <TelegramConnect parentId={parentId} />
-              </div>
-            )}
-          </div>
         </div>
-        {/* Конец flex layout */}
+        {/* Конец основного контента */}
       </div>
 
       {/* Модальное окно добавления ребёнка */}
