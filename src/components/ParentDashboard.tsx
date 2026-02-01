@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import SprintManager from './SprintManager'
 import CalendarView from './CalendarView'
-import TelegramConnect from './TelegramConnect'
 
 type Child = Database['public']['Tables']['children']['Row']
 type Task = Database['public']['Tables']['tasks']['Row']
@@ -251,9 +250,12 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     setEditTitle(task.title)
     setEditDescription(task.description || '')
     setEditPoints(task.points)
-    // Форматируем дату для input type="date"
+    // Форматируем дату для input type="date" без UTC сдвига
     const taskDate = new Date(task.created_at)
-    setEditDate(taskDate.toISOString().split('T')[0])
+    const year = taskDate.getFullYear()
+    const month = String(taskDate.getMonth() + 1).padStart(2, '0')
+    const day = String(taskDate.getDate()).padStart(2, '0')
+    setEditDate(`${year}-${month}-${day}`)
     setEditTime(task.start_time?.substring(0, 5) || '09:00')
     
     // Загружаем данные повторения
@@ -313,19 +315,25 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     }
 
     // Если дата изменилась
-    const currentDate = new Date(editingTask.created_at).toISOString().split('T')[0]
+    const taskDate = new Date(editingTask.created_at)
+    const currentDate = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`
+    
     if (editDate !== currentDate) {
-      const newDate = new Date(editDate)
-      newDate.setHours(0, 0, 0, 0)
-      updates.created_at = newDate.toISOString()
+      // Создаём дату без UTC сдвига
+      const [year, month, day] = editDate.split('-')
+      const dateStr = `${year}-${month}-${day} 00:00:00`
+      updates.created_at = dateStr
       
       // Проверяем изначальную дату
       if (editingTask.original_date) {
         const originalDate = new Date(editingTask.original_date)
         originalDate.setHours(0, 0, 0, 0)
         
+        const newDateCheck = new Date(editDate)
+        newDateCheck.setHours(0, 0, 0, 0)
+        
         // Если меняем дату обратно на original_date - сбрасываем перенос
-        if (originalDate.getTime() === newDate.getTime()) {
+        if (originalDate.getTime() === newDateCheck.getTime()) {
           updates.original_date = null
         }
         // Если меняем на другую дату - original_date остаётся как есть
@@ -562,19 +570,13 @@ ${url}
                           Открыть страницу →
                         </a>
                         <button
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation()
-                            try {
-                              const link = `${window.location.origin}/?child=${child.access_code}`
-                              await navigator.clipboard.writeText(link)
-                              alert('Ссылка скопирована! 🔗')
-                            } catch (err) {
-                              console.error('Failed to copy:', err)
-                            }
+                            openAccessCodeModal(child)
                           }}
                           className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
                         >
-                          🔗 Скопировать ссылку
+                          🔑 Код доступа
                         </button>
                       </div>
                     </div>
@@ -1218,12 +1220,6 @@ ${url}
                 onTaskClick={(task) => startEditTask(task)}
               />
             )}
-          </div>
-        )}
-      </div>
-
-      {/* Telegram уведомления */}
-      {parentId && <TelegramConnect parentId={parentId} />}
 
       {/* Модальное окно добавления ребёнка */}
       {showAddChild && (
@@ -1481,7 +1477,10 @@ ${url}
                           type="button"
                           onClick={() => {
                             const origDate = new Date(editingTask.original_date!)
-                            setEditDate(origDate.toISOString().split('T')[0])
+                            const year = origDate.getFullYear()
+                            const month = String(origDate.getMonth() + 1).padStart(2, '0')
+                            const day = String(origDate.getDate()).padStart(2, '0')
+                            setEditDate(`${year}-${month}-${day}`)
                           }}
                           className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 px-3 py-1.5 rounded-lg font-medium transition-all"
                         >
@@ -1649,6 +1648,7 @@ ${url}
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
