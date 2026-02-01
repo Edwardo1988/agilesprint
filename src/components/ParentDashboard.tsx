@@ -459,49 +459,45 @@ ${url}
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Заголовок */}
+        {/* Шапка */}
         <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Лого */}
             <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-2">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-800">
                 AgileSprint 🎯
               </h1>
-              <p className="text-base sm:text-lg text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600 hidden sm:block">
                 Управление задачами для ваших детей
               </p>
             </div>
-            {/* Код доступа родителя */}
-            <div className="bg-white rounded-xl shadow-lg p-4 border-2 border-blue-200">
-              <p className="text-xs text-gray-600 mb-1">Ваш код доступа:</p>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xl font-bold text-blue-600">
-                  {accessCode}
-                </span>
-                <button
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(accessCode)
-                      setCopiedParentCode(true)
-                      setTimeout(() => setCopiedParentCode(false), 2000)
-                    } catch (err) {
-                      console.error('Failed to copy:', err)
-                    }
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Скопировать код"
-                >
-                  {copiedParentCode ? '✓' : '📋'}
-                </button>
-              </div>
-              {copiedParentCode ? (
-                <p className="text-xs text-green-600 mt-1">
-                  ✓ Код скопирован!
-                </p>
-              ) : (
-                <p className="text-xs text-gray-500 mt-1">
-                  Сохраните для входа с другого устройства
-                </p>
-              )}
+
+            {/* Код доступа - компактный */}
+            <div className="hidden lg:flex items-center gap-2 bg-white rounded-xl shadow-md px-4 py-2 border-2 border-blue-200">
+              <span className="text-xs text-gray-600">Код:</span>
+              <code className="font-mono text-lg font-bold text-blue-600">
+                {accessCode}
+              </code>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(accessCode)
+                    setCopiedParentCode(true)
+                    setTimeout(() => setCopiedParentCode(false), 2000)
+                  } catch (err) {
+                    console.error('Failed to copy:', err)
+                  }
+                }}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                title="Скопировать код"
+              >
+                {copiedParentCode ? '✓' : '📋'}
+              </button>
+            </div>
+
+            {/* Telegram - с выпадающим меню */}
+            <div className="relative">
+              {parentId && <TelegramConnect parentId={parentId} />}
             </div>
           </div>
         </div>
@@ -862,177 +858,6 @@ ${url}
                   </button>
                 </div>
 
-                {/* Кнопка добавления задачи */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Добавить новую задачу</h3>
-                  <div className="space-y-4">
-                    {/* Название */}
-                    <input
-                      type="text"
-                      placeholder="Название задачи"
-                      value={newTaskTitle}
-                      onChange={(e) => setNewTaskTitle(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && addTask()}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
-                    />
-                    
-                    {/* Описание */}
-                    <textarea
-                      placeholder="Описание (необязательно)"
-                      value={newTaskDescription}
-                      onChange={(e) => setNewTaskDescription(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 resize-none"
-                      rows={2}
-                    />
-                    
-                    {/* Баллы */}
-                    <div className="flex items-center gap-4">
-                      <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                        Награда:
-                      </label>
-                      <input
-                        type="number"
-                        value={newTaskPoints}
-                        onChange={(e) => setNewTaskPoints(parseInt(e.target.value) || 0)}
-                        min="1"
-                        className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
-                        placeholder="10"
-                      />
-                      <span className="text-2xl">⭐</span>
-                    </div>
-
-                    {/* Время начала */}
-                    {!isRecurring && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ⏰ Время начала
-                        </label>
-                        <input
-                          type="time"
-                          value={newTaskTime}
-                          onChange={(e) => setNewTaskTime(e.target.value)}
-                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Время отображается в календарном виде
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Регулярная задача */}
-                    <div className="border-t-2 border-gray-200 pt-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={isRecurring}
-                          onChange={(e) => setIsRecurring(e.target.checked)}
-                          className="w-5 h-5 text-purple-600 rounded"
-                        />
-                        <span className="font-medium text-gray-700">🔄 Повторяющаяся задача</span>
-                      </label>
-
-                      {isRecurring && (
-                        <div className="mt-4 space-y-3 pl-7">
-                          {/* Паттерны повторения */}
-                          <div className="space-y-2">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="recurrence"
-                                value="daily"
-                                checked={recurrencePattern === 'daily'}
-                                onChange={(e) => setRecurrencePattern(e.target.value)}
-                                className="w-4 h-4 text-purple-600"
-                              />
-                              <span className="text-gray-700">📅 Ежедневно</span>
-                            </label>
-                            
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="recurrence"
-                                value="weekdays"
-                                checked={recurrencePattern === 'weekdays'}
-                                onChange={(e) => setRecurrencePattern(e.target.value)}
-                                className="w-4 h-4 text-purple-600"
-                              />
-                              <span className="text-gray-700">💼 По будням (Пн-Пт)</span>
-                            </label>
-                            
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="recurrence"
-                                value="weekends"
-                                checked={recurrencePattern === 'weekends'}
-                                onChange={(e) => setRecurrencePattern(e.target.value)}
-                                className="w-4 h-4 text-purple-600"
-                              />
-                              <span className="text-gray-700">🎉 Выходные (Сб-Вс)</span>
-                            </label>
-                            
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <input
-                                type="radio"
-                                name="recurrence"
-                                value="custom"
-                                checked={recurrencePattern === 'custom'}
-                                onChange={(e) => setRecurrencePattern(e.target.value)}
-                                className="w-4 h-4 text-purple-600"
-                              />
-                              <span className="text-gray-700">🎯 Выбранные дни</span>
-                            </label>
-                          </div>
-
-                          {/* Выбор дней для кастомного паттерна */}
-                          {recurrencePattern === 'custom' && (
-                            <div className="pl-6">
-                              <div className="flex flex-wrap gap-2">
-                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day, idx) => {
-                                  const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-                                  const isSelected = selectedDays.includes(day)
-                                  return (
-                                    <button
-                                      key={day}
-                                      type="button"
-                                      onClick={() => {
-                                        if (isSelected) {
-                                          setSelectedDays(selectedDays.filter(d => d !== day))
-                                        } else {
-                                          setSelectedDays([...selectedDays, day])
-                                        }
-                                      }}
-                                      className={`px-3 py-2 rounded-lg font-medium transition-all ${
-                                        isSelected
-                                          ? 'bg-purple-500 text-white shadow-md'
-                                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                      }`}
-                                    >
-                                      {dayNames[idx]}
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
-                            ℹ️ Регулярная задача создаст автоматические экземпляры по выбранному расписанию
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Кнопка добавить */}
-                    <button
-                      onClick={addTask}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg"
-                    >
-                      ➕ Добавить задачу
-                    </button>
-                  </div>
-                </div>
-
                 {/* Список задач */}
                 <div>
                   {(() => {
@@ -1221,9 +1046,6 @@ ${url}
           </div>
         )}
       </div>
-
-      {/* Telegram уведомления */}
-      {parentId && <TelegramConnect parentId={parentId} />}
 
       {/* Модальное окно добавления ребёнка */}
       {showAddChild && (
