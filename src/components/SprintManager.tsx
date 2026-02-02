@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import SprintCountdown from './SprintCountdown'
+import SprintCompletionModal from './SprintCompletionModal'
+import RetrospectivesView from './RetrospectivesView'
 
 type Sprint = Database['public']['Tables']['sprints']['Row']
 
@@ -18,6 +20,9 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
   const [editName, setEditName] = useState('')
   const [editGoal, setEditGoal] = useState('')
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [sprintToComplete, setSprintToComplete] = useState<Sprint | null>(null)
+  const [activeTab, setActiveTab] = useState<'sprints' | 'retrospectives'>('sprints')
 
   const activeSprint = sprints.find(s => s.is_active)
   const completedSprints = sprints.filter(s => !s.is_active)
@@ -59,15 +64,15 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
     }
   }
 
-  const completeSprint = async (sprintId: string) => {
-    const { error } = await supabase
-      .from('sprints')
-      .update({ is_active: false })
-      .eq('id', sprintId)
+  const completeSprint = async (sprint: Sprint) => {
+    setSprintToComplete(sprint)
+    setShowCompletionModal(true)
+  }
 
-    if (!error) {
-      onUpdate()
-    }
+  const handleSprintCompleted = () => {
+    setShowCompletionModal(false)
+    setSprintToComplete(null)
+    onUpdate()
   }
 
   const startEditSprint = (sprint: Sprint) => {
@@ -112,17 +117,49 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
   return (
     <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Спринты</h2>
-        <button
-          onClick={() => setShowCreateSprint(true)}
-          className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl"
-        >
-          + Создать спринт
-        </button>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Спринты</h2>
+          
+          {/* Вкладки */}
+          <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('sprints')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                activeTab === 'sprints'
+                  ? 'bg-white text-purple-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              🎯 Спринты
+            </button>
+            <button
+              onClick={() => setActiveTab('retrospectives')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                activeTab === 'retrospectives'
+                  ? 'bg-white text-purple-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              📝 Ретро
+            </button>
+          </div>
+        </div>
+        
+        {activeTab === 'sprints' && (
+          <button
+            onClick={() => setShowCreateSprint(true)}
+            className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg hover:shadow-xl"
+          >
+            + Создать спринт
+          </button>
+        )}
       </div>
 
-      {/* Активный спринт */}
-      {activeSprint ? (
+      {/* Контент вкладок */}
+      {activeTab === 'sprints' ? (
+        <>
+          {/* Активный спринт */}
+          {activeSprint ? (
         <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-purple-200 rounded-xl p-4 sm:p-6 mb-6">
           {editingSprint?.id === activeSprint.id ? (
             /* Форма редактирования */
@@ -189,7 +226,7 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                     ✏️ Редактировать
                   </button>
                   <button
-                    onClick={() => completeSprint(activeSprint.id)}
+                    onClick={() => completeSprint(activeSprint)}
                     className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-colors shadow-md"
                   >
                     ✓ Завершить спринт
@@ -197,13 +234,14 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                 </div>
               </div>
 
-              {/* Таймер обратного отсчёта */}
-              <div className="mt-4">
-                <SprintCountdown endDate={activeSprint.end_date} />
-              </div>
-
               {/* Статистика */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-4">
+                <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
+                  <div className="text-xs sm:text-sm text-gray-600 mb-1">Дней осталось</div>
+                  <div className="text-xl sm:text-2xl font-bold text-purple-600">
+                    {getDaysRemaining(activeSprint.end_date)}
+                  </div>
+                </div>
                 <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
                   <div className="text-xs sm:text-sm text-gray-600 mb-1">Начало</div>
                   <div className="text-sm sm:text-base font-semibold text-gray-800">
@@ -213,7 +251,7 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                     })}
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
+                <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm col-span-2 sm:col-span-1">
                   <div className="text-xs sm:text-sm text-gray-600 mb-1">Окончание</div>
                   <div className="text-sm sm:text-base font-semibold text-gray-800">
                     {new Date(activeSprint.end_date).toLocaleDateString('ru-RU', { 
@@ -277,6 +315,24 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
             ))}
           </div>
         </div>
+      )}
+
+        </>
+      ) : (
+        /* Вкладка Ретроспективы */
+        <RetrospectivesView childId={childId} />
+      )}
+
+      {/* Модальное окно завершения спринта */}
+      {showCompletionModal && sprintToComplete && (
+        <SprintCompletionModal
+          sprint={sprintToComplete}
+          onClose={() => {
+            setShowCompletionModal(false)
+            setSprintToComplete(null)
+          }}
+          onComplete={handleSprintCompleted}
+        />
       )}
 
       {/* Модальное окно создания спринта */}
