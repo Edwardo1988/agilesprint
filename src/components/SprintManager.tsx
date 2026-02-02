@@ -197,14 +197,13 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                 </div>
               </div>
 
+              {/* Таймер обратного отсчёта */}
+              <div className="mt-4">
+                <SprintCountdown endDate={activeSprint.end_date} />
+              </div>
+
               {/* Статистика */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mt-4">
-                <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
-                  <div className="text-xs sm:text-sm text-gray-600 mb-1">Дней осталось</div>
-                  <div className="text-xl sm:text-2xl font-bold text-purple-600">
-                    <SprintCountdown endDate={sprint.end_date} />
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4">
                 <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
                   <div className="text-xs sm:text-sm text-gray-600 mb-1">Начало</div>
                   <div className="text-sm sm:text-base font-semibold text-gray-800">
@@ -214,7 +213,7 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                     })}
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm col-span-2 sm:col-span-1">
+                <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
                   <div className="text-xs sm:text-sm text-gray-600 mb-1">Окончание</div>
                   <div className="text-sm sm:text-base font-semibold text-gray-800">
                     {new Date(activeSprint.end_date).toLocaleDateString('ru-RU', { 
