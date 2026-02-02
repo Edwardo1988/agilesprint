@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
+import SprintCountdown from './SprintCountdown'
 
 type Sprint = Database['public']['Tables']['sprints']['Row']
 
@@ -201,7 +202,7 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                 <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
                   <div className="text-xs sm:text-sm text-gray-600 mb-1">Дней осталось</div>
                   <div className="text-xl sm:text-2xl font-bold text-purple-600">
-                    {getDaysRemaining(activeSprint.end_date)}
+                    <SprintCountdown endDate={sprint.end_date} />
                   </div>
                 </div>
                 <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
