@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import SprintCountdown from './SprintCountdown'
@@ -23,15 +23,40 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
   const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [sprintToComplete, setSprintToComplete] = useState<Sprint | null>(null)
   const [activeTab, setActiveTab] = useState<'sprints' | 'retrospectives'>('sprints')
+  const [sprintPoints, setSprintPoints] = useState(0)
+  const [moveTasks, setMoveTasks] = useState(true) // Переносить задачи по умолчанию
 
   const activeSprint = sprints.find(s => s.is_active)
   const completedSprints = sprints.filter(s => !s.is_active)
 
+  // Загружаем баллы активного спринта
+  useEffect(() => {
+    if (activeSprint) {
+      loadSprintPoints(activeSprint.id)
+    }
+  }, [activeSprint?.id])
+
+  const loadSprintPoints = async (sprintId: string) => {
+    const { data: tasks } = await supabase
+      .from('tasks')
+      .select('points, is_completed')
+      .eq('sprint_id', sprintId)
+
+    const points = tasks
+      ?.filter(t => t.is_completed)
+      .reduce((sum, t) => sum + (t.points || 0), 0) || 0
+
+    setSprintPoints(points)
+  }
+
   const createSprint = async () => {
     if (!newSprintName.trim()) return
 
+    let oldSprintId: string | null = null
+
     // Деактивировать текущий активный спринт
     if (activeSprint) {
+      oldSprintId = activeSprint.id
       await supabase
         .from('sprints')
         .update({ is_active: false })
@@ -43,7 +68,7 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
     const endDate = new Date()
     endDate.setDate(endDate.getDate() + 7)
 
-    const { error } = await supabase
+    const { data: newSprint, error } = await supabase
       .from('sprints')
       .insert([
         {
@@ -55,12 +80,28 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
           is_active: true,
         }
       ])
+      .select()
+      .single()
 
-    if (!error) {
-      setNewSprintName('')
-      setNewSprintGoal('')
-      setShowCreateSprint(false)
-      onUpdate()
+    if (error) {
+      console.error('Error creating sprint:', error)
+      return
+    }
+
+    // Переносим невыполненные задачи если нужно
+    if (moveTasks && oldSprintId && newSprint) {
+      await supabase
+        .from('tasks')
+        .update({ sprint_id: newSprint.id })
+        .eq('sprint_id', oldSprintId)
+        .eq('is_completed', false)
+    }
+
+    setNewSprintName('')
+    setNewSprintGoal('')
+    setShowCreateSprint(false)
+    setMoveTasks(true) // Сброс на default
+    onUpdate()
     }
   }
 
@@ -240,7 +281,7 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
               </div>
 
               {/* Статистика */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4">
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-4">
                 <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm">
                   <div className="text-xs sm:text-sm text-gray-600 mb-1">Начало</div>
                   <div className="text-sm sm:text-base font-semibold text-gray-800">
@@ -259,6 +300,13 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                     })}
                   </div>
                 </div>
+                <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg p-3 sm:p-4 shadow-sm border-2 border-yellow-200">
+                  <div className="text-xs sm:text-sm text-yellow-700 mb-1 font-medium">Баллы</div>
+                  <div className="text-xl sm:text-2xl font-bold text-yellow-600 flex items-center gap-1">
+                    {sprintPoints}
+                    <span className="text-base">⭐</span>
+                  </div>
+                </div>
               </div>
             </>
           )}
@@ -270,7 +318,7 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
             onClick={() => setShowCreateSprint(true)}
             className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all shadow-lg"
           >
-            Создать первый спринт
+            {completedSprints.length > 0 ? 'Создать новый спринт' : 'Создать первый спринт'}
           </button>
         </div>
       )}
@@ -374,6 +422,29 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-purple-500 resize-none"
                 />
               </div>
+              
+              {/* Чекбокс переноса задач (только если есть активный спринт) */}
+              {activeSprint && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={moveTasks}
+                      onChange={(e) => setMoveTasks(e.target.checked)}
+                      className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500 mt-0.5 flex-shrink-0"
+                    />
+                    <div>
+                      <div className="font-medium text-purple-900 mb-1">
+                        📦 Перенести невыполненные задачи
+                      </div>
+                      <div className="text-xs text-purple-700">
+                        Задачи из текущего спринта, которые не были выполнены, автоматически переместятся в новый спринт
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              )}
+              
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
                 <p className="text-xs sm:text-sm text-blue-700">
                   ℹ️ Спринт автоматически создаётся на 7 дней
