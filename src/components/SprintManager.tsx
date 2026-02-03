@@ -24,12 +24,11 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
   const [sprintToComplete, setSprintToComplete] = useState<Sprint | null>(null)
   const [activeTab, setActiveTab] = useState<'sprints' | 'retrospectives'>('sprints')
   const [sprintPoints, setSprintPoints] = useState(0)
-  const [moveTasks, setMoveTasks] = useState(true) // Переносить задачи по умолчанию
+  const [moveTasks, setMoveTasks] = useState(true)
 
   const activeSprint = sprints.find(s => s.is_active)
   const completedSprints = sprints.filter(s => !s.is_active)
 
-  // Загружаем баллы активного спринта
   useEffect(() => {
     if (activeSprint) {
       loadSprintPoints(activeSprint.id)
@@ -100,9 +99,8 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
     setNewSprintName('')
     setNewSprintGoal('')
     setShowCreateSprint(false)
-    setMoveTasks(true) // Сброс на default
+    setMoveTasks(true)
     onUpdate()
-    }
   }
 
   const completeSprint = async (sprint: Sprint) => {
@@ -423,7 +421,7 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
                 />
               </div>
               
-              {/* Чекбокс переноса задач (только если есть активный спринт) */}
+              {/* Чекбокс переноса задач */}
               {activeSprint && (
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <label className="flex items-start gap-3 cursor-pointer">
