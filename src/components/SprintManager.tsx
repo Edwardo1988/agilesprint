@@ -25,6 +25,7 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
   const [activeTab, setActiveTab] = useState<'sprints' | 'retrospectives'>('sprints')
   const [sprintPoints, setSprintPoints] = useState(0)
   const [moveTasks, setMoveTasks] = useState(true)
+  const [isMigrating, setIsMigrating] = useState(false)
 
   const activeSprint = sprints.find(s => s.is_active)
   const completedSprints = sprints.filter(s => !s.is_active)
@@ -112,6 +113,45 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
     setShowCompletionModal(false)
     setSprintToComplete(null)
     onUpdate()
+  }
+
+  const migrateOldTasks = async () => {
+    if (!activeSprint) return
+
+    setIsMigrating(true)
+
+    // Находим все завершённые спринты этого ребёнка
+    const completedSprintIds = completedSprints.map(s => s.id)
+
+    if (completedSprintIds.length === 0) {
+      alert('Нет задач для переноса')
+      setIsMigrating(false)
+      return
+    }
+
+    // Переносим все невыполненные задачи из завершённых спринтов
+    const { data: updatedTasks, error } = await supabase
+      .from('tasks')
+      .update({ sprint_id: activeSprint.id })
+      .in('sprint_id', completedSprintIds)
+      .eq('is_completed', false)
+      .select()
+
+    setIsMigrating(false)
+
+    if (error) {
+      console.error('Error migrating tasks:', error)
+      alert('Ошибка при переносе задач')
+      return
+    }
+
+    const count = updatedTasks?.length || 0
+    if (count > 0) {
+      alert(`✅ Перенесено задач: ${count}`)
+      onUpdate()
+    } else {
+      alert('Нет невыполненных задач для переноса')
+    }
   }
 
   const startEditSprint = (sprint: Sprint) => {
@@ -277,6 +317,32 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
               <div className="mt-4">
                 <SprintCountdown endDate={activeSprint.end_date} />
               </div>
+
+              {/* Кнопка переноса старых задач */}
+              {completedSprints.length > 0 && (
+                <div className="mt-4">
+                  <button
+                    onClick={migrateOldTasks}
+                    disabled={isMigrating}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isMigrating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        <span>Переношу задачи...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📦</span>
+                        <span>Перенести задачи из предыдущих спринтов</span>
+                      </>
+                    )}
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Невыполненные задачи из завершённых спринтов будут перенесены в текущий
+                  </p>
+                </div>
+              )}
 
               {/* Статистика */}
               <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-4">
