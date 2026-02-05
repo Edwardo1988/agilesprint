@@ -27,6 +27,14 @@ export default function BalloonView({ tasks, onCompleteTask }: BalloonViewProps)
   const activeTasks = tasks.filter(t => !t.is_completed)
   const completedTasks = tasks.filter(t => t.is_completed)
 
+  // Определяем размер шарика в зависимости от баллов
+  const getBalloonSize = (points: number) => {
+    if (points >= 30) return { size: 'w-40 h-40 sm:w-44 sm:h-44', text: 'text-3xl', blur: 'w-10 h-14' }
+    if (points >= 20) return { size: 'w-36 h-36 sm:w-40 sm:h-40', text: 'text-2xl', blur: 'w-9 h-12' }
+    if (points >= 10) return { size: 'w-32 h-32 sm:w-36 sm:h-36', text: 'text-xl', blur: 'w-8 h-12' }
+    return { size: 'w-28 h-28 sm:w-32 sm:h-32', text: 'text-lg', blur: 'w-7 h-10' }
+  }
+
   const handleBalloonClick = (task: Task) => {
     if (task.is_completed || poppingBalloon) return
 
@@ -81,6 +89,7 @@ export default function BalloonView({ tasks, onCompleteTask }: BalloonViewProps)
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 mb-12">
           {activeTasks.map((task, index) => {
             const isPoppingThis = poppingBalloon === task.id
+            const balloonSize = getBalloonSize(task.points)
 
             return (
               <div
@@ -95,9 +104,9 @@ export default function BalloonView({ tasks, onCompleteTask }: BalloonViewProps)
                     ${isPoppingThis ? 'animate-pop' : 'hover:scale-110 hover:-translate-y-2'}
                   `}
                 >
-                  {/* Шар */}
+                  {/* Круглый шар */}
                   <div className={`
-                    w-28 h-32 sm:w-32 sm:h-36 rounded-t-full rounded-b-lg
+                    ${balloonSize.size} rounded-full
                     bg-gradient-to-br ${getBalloonColor(index)}
                     shadow-lg hover:shadow-2xl
                     flex items-center justify-center
@@ -105,16 +114,21 @@ export default function BalloonView({ tasks, onCompleteTask }: BalloonViewProps)
                     ${isPoppingThis ? 'opacity-0' : 'opacity-100'}
                   `}>
                     {/* Блик на шарике */}
-                    <div className="absolute top-4 left-6 w-8 h-12 bg-white opacity-30 rounded-full blur-sm" />
+                    <div className={`absolute top-3 left-4 ${balloonSize.blur} bg-white opacity-30 rounded-full blur-sm`} />
                     
                     {/* Баллы */}
-                    <div className="text-white font-bold text-2xl z-10">
+                    <div className={`text-white font-bold ${balloonSize.text} z-10`}>
                       {task.points}⭐
                     </div>
                   </div>
 
-                  {/* Ниточка */}
-                  <div className="w-0.5 h-8 bg-gray-400 mx-auto" />
+                  {/* Ниточка (длина зависит от размера шарика) */}
+                  <div 
+                    className="w-0.5 bg-gray-400 mx-auto"
+                    style={{ 
+                      height: task.points >= 20 ? '40px' : task.points >= 10 ? '32px' : '24px' 
+                    }}
+                  />
 
                   {/* Взрыв (при лопании) */}
                   {isPoppingThis && (
