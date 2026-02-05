@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Database } from '../lib/database.types'
 import AchievementsBadge from './AchievementsBadge'
+import BalloonView from './BalloonView'
 
 type Child = Database['public']['Tables']['children']['Row']
 type Task = Database['public']['Tables']['tasks']['Row']
@@ -60,6 +61,9 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null)
   const [loading, setLoading] = useState(true)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [viewMode, setViewMode] = useState<'list' | 'balloons'>(() => {
+    return (localStorage.getItem('childViewMode') as 'list' | 'balloons') || 'list'
+  })
 
   useEffect(() => {
     if (!accessCode) {
@@ -431,11 +435,50 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
               <span className="text-2xl">🎯</span>
               Задачи спринта
             </h2>
-            <div className="space-y-3 sm:space-y-4">
-              {sprintTasks.filter(t => !t.is_completed).map(task => (
-                <TaskCard key={task.id} task={task} onToggle={toggleTask} />
-              ))}
+
+            {/* Переключатель режима просмотра */}
+            <div className="flex justify-center gap-2 mb-6">
+              <button
+                onClick={() => {
+                  setViewMode('list')
+                  localStorage.setItem('childViewMode', 'list')
+                }}
+                className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+              >
+                📋 Список
+              </button>
+              <button
+                onClick={() => {
+                  setViewMode('balloons')
+                  localStorage.setItem('childViewMode', 'balloons')
+                }}
+                className={`px-6 py-3 rounded-xl font-semibold transition-all ${
+                  viewMode === 'balloons'
+                    ? 'bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+              >
+                🎈 Шарики
+              </button>
             </div>
+
+            {/* Условный рендеринг */}
+            {viewMode === 'list' ? (
+              <div className="space-y-3 sm:space-y-4">
+                {sprintTasks.filter(t => !t.is_completed).map(task => (
+                  <TaskCard key={task.id} task={task} onToggle={toggleTask} />
+                ))}
+              </div>
+            ) : (
+              <BalloonView 
+                tasks={sprintTasks} 
+                onCompleteTask={toggleTask}
+              />
+            )}
           </div>
         )}
 
