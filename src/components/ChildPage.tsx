@@ -366,13 +366,6 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
           </div>
         </div>
 
-        {/* Достижения */}
-        <AchievementsBadge 
-          tasks={tasks} 
-          totalPoints={child.total_points} 
-          activeSprint={activeSprint}
-        />
-
         {/* Активный спринт */}
         {activeSprint && (
           <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
@@ -499,7 +492,7 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
 
         {/* Выполненные задачи */}
         {completedTasks.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+          <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2">
               <span className="text-2xl">✅</span>
               Выполнено ({completedTasks.length})
@@ -511,6 +504,13 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
             </div>
           </div>
         )}
+
+        {/* Достижения */}
+        <AchievementsBadge 
+          tasks={tasks} 
+          totalPoints={child.total_points} 
+          activeSprint={activeSprint}
+        />
       </div>
 
       {/* Модальное окно выбора эмодзи */}
