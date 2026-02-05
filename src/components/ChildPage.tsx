@@ -317,7 +317,7 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
     return taskDate <= today
   })
   
-  const completedTasks = visibleTasks.filter(t => t.is_completed)
+  const completedTasks = visibleTasks.filter(t => t.is_completed && t.sprint_id === activeSprint?.id)
   const sprintTasks = visibleTasks.filter(t => t.sprint_id === activeSprint?.id)
   const completedSprintTasks = sprintTasks.filter(t => t.is_completed)
   const otherTasks = visibleTasks.filter(t => !t.sprint_id || t.sprint_id !== activeSprint?.id)
