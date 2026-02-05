@@ -182,7 +182,7 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
                   <div>
                     <p className="text-blue-800 font-medium mb-2">Шаг 1: Откройте бота</p>
                     <a
-                      href="https://t.me/agilesprint_bot"
+                      href="https://t.me/AgileFamilyBot"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block w-full px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-center font-medium transition-all"
