@@ -61,9 +61,7 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null)
   const [loading, setLoading] = useState(true)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [viewMode, setViewMode] = useState<'list' | 'balloons'>(() => {
-    return (localStorage.getItem('childViewMode') as 'list' | 'balloons') || 'list'
-  })
+  const [viewMode, setViewMode] = useState<'list' | 'balloons'>('list')
 
   useEffect(() => {
     if (!accessCode) {
@@ -108,6 +106,11 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
 
       console.log('Child loaded:', childData)
       setChild(childData)
+
+      // Устанавливаем режим просмотра из localStorage или default_view_mode
+      const savedMode = localStorage.getItem(`childViewMode_${childData.id}`) as 'list' | 'balloons'
+      const defaultMode = (childData.default_view_mode as 'list' | 'balloons') || 'list'
+      setViewMode(savedMode || defaultMode)
 
     // Загрузить активный спринт (может не быть, это нормально)
     const { data: sprintData, error: sprintError } = await supabase
@@ -443,7 +446,9 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
               <button
                 onClick={() => {
                   setViewMode('list')
-                  localStorage.setItem('childViewMode', 'list')
+                  if (child) {
+                    localStorage.setItem(`childViewMode_${child.id}`, 'list')
+                  }
                 }}
                 className={`px-6 py-3 rounded-xl font-semibold transition-all ${
                   viewMode === 'list'
@@ -456,7 +461,9 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
               <button
                 onClick={() => {
                   setViewMode('balloons')
-                  localStorage.setItem('childViewMode', 'balloons')
+                  if (child) {
+                    localStorage.setItem(`childViewMode_${child.id}`, 'balloons')
+                  }
                 }}
                 className={`px-6 py-3 rounded-xl font-semibold transition-all ${
                   viewMode === 'balloons'
