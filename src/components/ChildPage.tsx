@@ -506,8 +506,8 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
           </div>
         )}
 
-        {/* Выполненные задачи */}
-        {completedTasks.length > 0 && (
+        {/* Выполненные задачи (только в режиме списка) */}
+        {completedTasks.length > 0 && viewMode === 'list' && (
           <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6 flex items-center gap-2">
               <span className="text-2xl">✅</span>
