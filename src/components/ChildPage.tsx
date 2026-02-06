@@ -191,8 +191,15 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
 
     if (childError) {
       console.error('Error updating points:', childError)
-      // Перезагрузить данные при ошибке
-      loadChildData()
+      // Откатить изменения вместо перезагрузки
+      setTasks(prevTasks => 
+        prevTasks.map(t => 
+          t.id === taskId ? { ...t, is_completed: currentStatus } : t
+        )
+      )
+      setChild(prev => 
+        prev ? { ...prev, total_points: prev.total_points - pointsChange } : null
+      )
       return
     }
 
@@ -237,13 +244,15 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
         // original_date не устанавливаем - created_at уже на завтра
       }
 
-      const { error } = await supabase
+      const { data: newTask, error } = await supabase
         .from('tasks')
         .insert([newInstance])
+        .select()
+        .single()
 
-      if (!error) {
-        // Перезагрузить данные чтобы показать новый экземпляр
-        loadChildData()
+      if (!error && newTask) {
+        // Добавляем новую задачу в state без перезагрузки
+        setTasks(prevTasks => [...prevTasks, newTask as Task])
       }
     }
   }
