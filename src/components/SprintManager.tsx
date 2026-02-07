@@ -36,6 +36,19 @@ export default function SprintManager({ childId, sprints, onUpdate }: SprintMana
     }
   }, [activeSprint?.id])
 
+  // Блокировка скролла при открытых модалках
+  useEffect(() => {
+    if (showCreateSprint || showCompletionModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showCreateSprint, showCompletionModal])
+
   const loadSprintPoints = async (sprintId: string) => {
     const { data: tasks } = await supabase
       .from('tasks')

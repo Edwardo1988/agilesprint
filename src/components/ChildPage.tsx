@@ -74,6 +74,19 @@ export default function ChildPage({ accessCode }: ChildPageProps) {
     loadChildData()
   }, [accessCode])
 
+  // Блокировка скролла при открытом emoji picker
+  useEffect(() => {
+    if (showEmojiPicker) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showEmojiPicker])
+
   const loadChildData = async () => {
     if (!accessCode) {
       console.error('loadChildData called without accessCode')

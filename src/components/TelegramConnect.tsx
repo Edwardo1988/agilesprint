@@ -1,4 +1,3 @@
-// src/components/TelegramConnect.tsx
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -19,7 +18,6 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
     generateLinkCode()
   }, [parentId])
 
-  // Закрывать меню при клике вне его
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -92,7 +90,6 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Кнопка в шапке */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 px-4 py-2 rounded-xl shadow-md border-2 transition-all ${
@@ -118,12 +115,10 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
         </svg>
       </button>
 
-      {/* Dropdown меню - выпадает влево и вниз */}
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border-2 border-purple-200 z-50 overflow-hidden">
           {isConnected ? (
             <div className="p-5">
-              {/* Заголовок */}
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">✅</span>
@@ -134,7 +129,6 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
                 )}
               </div>
 
-              {/* Информация об уведомлениях */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
                 <p className="text-sm text-blue-700 font-medium mb-2">
                   Вы получаете:
@@ -155,7 +149,6 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
                 </ul>
               </div>
 
-              {/* Кнопка отключения */}
               <button
                 onClick={disconnect}
                 className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-all"
@@ -165,7 +158,6 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
             </div>
           ) : (
             <div className="p-5">
-              {/* Заголовок */}
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-2xl">📱</span>
@@ -176,7 +168,6 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
                 </p>
               </div>
 
-              {/* Инструкция */}
               <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-4">
                 <div className="space-y-3 text-sm">
                   <div>
@@ -212,7 +203,6 @@ export default function TelegramConnect({ parentId }: TelegramConnectProps) {
                 </div>
               </div>
 
-              {/* Подсказка */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                 <p className="text-xs text-gray-600">
                   💡 После подключения будете получать утренние напоминания (09:00) и вечерние итоги (20:00)

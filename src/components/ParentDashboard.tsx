@@ -75,6 +75,19 @@ export default function ParentDashboard({ parentId, accessCode }: ParentDashboar
     loadDashboardData()
   }, [])
 
+  // Блокировка скролла при открытых модалках
+  useEffect(() => {
+    if (showAddChild || showAccessCodeModal || editingTask) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showAddChild, showAccessCodeModal, editingTask])
+
   useEffect(() => {
     if (children.length > 0 && !selectedChild) {
       setSelectedChild(children[0].id)
@@ -1450,7 +1463,7 @@ ${url}
       {/* Модальное окно редактирования задачи */}
       {editingTask && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
           onClick={cancelEditTask}
         >
           <div 
